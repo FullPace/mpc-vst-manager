@@ -55,9 +55,32 @@ def button(name, w, h, label, fill, tx, ic=None, stroke=None, dash=False, size=1
     svg(name, w, h, body)
 
 
+def text_w(s, size):   # Titillium Web SemiBold, close enough to size a label to its text
+    return sum(0.3 if ch in "il.:,'" else 0.62 if ch.isupper() else 0.5 for ch in s) * size
+
+
+BADGES = [("Stable", "#d6d8db", "#3a3c41", None), ("Beta", AMBER_TX, "#6b5220", None),
+          ("High CPU", AMBER_TX, "#6b5220", "warn"), ("Tested", GREEN, "#2f5e46", "check"), ("Old install", "#c9ccd1", "#4a4c52", None)]
+
+
+def badge_row(labels, y, h):
+    """labels side by side from the left, each only as wide as its text (and icon)"""
+    out, x = "", 0.5
+    for label, colour, edge, ic in labels:
+        w = text_w(label, 13) + 14 + (15 if ic else 0)
+        out += '<rect x="%g" y="%g" width="%g" height="%d" rx="4" fill="none" stroke="%s"/>' % (x, y + 0.5, w, h - 1, edge)
+        tx = x + 7
+        if ic:
+            out += icon(ic, x + 5, y + 2.5, 13, colour, 2.5)
+            tx += 15
+        out += text(tx, y + h / 2 + 4.6, label, 13, colour, 600)
+        x += w + 6
+    return out
+
+
 def main():
     os.makedirs(OUT, exist_ok=True)
-    # the page: header, tab well and footer; everything else is live or switched
+    # the page: header (logo, title, storage label) and footer; everything else is live or switched
     grid = "".join('<rect x="%d" y="%d" width="11" height="11" rx="1.5" fill="%s" stroke="%s" stroke-width="2"/>' % (
         x, y, RED if (x, y) == (39, 32) else "none", RED if (x, y) == (39, 32) else INK) for x in (24, 39) for y in (17, 32))
     svg("bg.svg", 1280, 628,
@@ -65,69 +88,66 @@ def main():
         + '<rect width="1280" height="60" fill="%s"/><rect y="60" width="1280" height="1" fill="%s"/>' % (PANEL, LINE)
         + grid + text(66, 39, "PLUGIN MANAGER", 24, INK, 700, spacing=3)
         + '<rect x="1036" y="15" width="1" height="30" fill="#2e3034"/>'
-        + text(1056, 26, "INTERNAL", 14, MUTED, 600, spacing=1)
+        + text(1056, 26, "INTERNAL STORAGE", 14, MUTED, 600, spacing=1)
         + '<rect x="1056" y="37" width="200" height="5" rx="2.5" fill="#2a2b2f"/>'
         + '<rect x="24" y="64" width="580" height="56" rx="8" fill="%s" stroke="%s"/>' % (PANEL, LINE)
-        + '<rect y="556" width="1280" height="72" fill="%s"/><rect y="556" width="1280" height="1" fill="%s"/>' % (PANEL, LINE)
-        + '<rect x="206" y="576" width="1" height="32" fill="#2e3034"/>')
+        + '<rect x="1230" y="122" width="22" height="400" rx="11" fill="none"/>'
+        + '<rect y="566" width="1280" height="62" fill="%s"/><rect y="566" width="1280" height="1" fill="%s"/>' % (PANEL, LINE))
     svg("net_on.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="#3fbf7f"/>' + text(16, 17, "ONLINE", 15, MUTED, 600, spacing=1))
     svg("net_off.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="%s"/>' % RED + text(16, 17, "OFFLINE", 15, "#ff9a93", 600, spacing=1))
-    # a plugin card (the list row's own picture): the thumbnail tile and the checksum shield are part of it
-    for name, fill, edge in (("card_off.svg", PANEL, "#222326"), ("card_on.svg", "#1d1e21", RED)):
-        svg(name, 1232, 118, '<rect x="1" y="1" width="1230" height="116" rx="10" fill="%s" stroke="%s" stroke-width="2"/>' % (fill, edge)
-            + '<rect x="13" y="13" width="92" height="92" rx="8" fill="#24262a" stroke="#34363b"/>'
-            + icon("shield", 816, 85, 13, "#7c8086", 2))
-    # card buttons
-    button("btn_install.svg", 196, 56, "INSTALL", RED, "#ffffff", "down")
-    button("btn_update.svg", 196, 56, "UPDATE", AMBER, "#1a1205", "refresh")
-    button("btn_installed.svg", 196, 56, "INSTALLED", "none", "#c9ccd1", "check", stroke="#3a3c41")
-    button("btn_q_install.svg", 196, 56, "INSTALL · QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
-    button("btn_q_update.svg", 196, 56, "UPDATE · QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
-    button("btn_q_remove.svg", 196, 56, "REMOVE · QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
-    button("btn_disabled.svg", 196, 56, "INSTALL", "#222326", "#5c5f65", "lock", stroke="#2e3034")
-    button("btn_reinstall.svg", 96, 56, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=14)
-    button("btn_remove.svg", 96, 56, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=14)
-    svg("more.svg", 44, 56, "".join('<circle cx="22" cy="%d" r="2.6" fill="%s"/>' % (y, MUTED) for y in (21, 28, 35)))
-    # badges (the "tested" one gets its device name as live text)
-    def badge(name, w, label, colour, edge, ic=None):
-        body = '<rect x="0.5" y="0.5" width="%d" height="25" rx="5" fill="none" stroke="%s"/>' % (w - 1, edge)
-        x = 10
-        if ic:
-            body += icon(ic, 9, 6, 14, colour, 2.5)
-            x = 28
-        svg(name, w, 26, body + text(x, 18, label, 15, colour, 600))
-    badge("badge_stable.svg", 72, "Stable", "#d6d8db", "#3a3c41")
-    badge("badge_beta.svg", 64, "Beta", AMBER_TX, "#6b5220")
-    badge("badge_cpu.svg", 112, "High CPU", AMBER_TX, "#6b5220", "warn")
-    badge("badge_old.svg", 104, "Old install", "#c9ccd1", "#4a4c52")
-    svg("badge_tested.svg", 200, 26, '<rect x="0.5" y="0.5" width="199" height="25" rx="5" fill="none" stroke="#2f5e46"/>'
-        + icon("check", 9, 6, 14, GREEN, 3))
+    # a list row (the list tile's own picture; the plugin picture sits on its left)
+    for name, fill, edge in (("row_off.svg", PANEL, "#222326"), ("row_on.svg", "#1d1e21", RED)):
+        svg(name, 1190, 72, '<rect x="1" y="1" width="1188" height="70" rx="8" fill="%s" stroke="%s" stroke-width="2"/>' % (fill, edge))
+    # row buttons
+    button("btn_install.svg", 160, 44, "INSTALL", RED, "#ffffff", "down", size=16)
+    button("btn_update.svg", 160, 44, "UPDATE", AMBER, "#1a1205", "refresh", size=16)
+    button("btn_installed.svg", 160, 44, "INSTALLED", "none", "#c9ccd1", "check", stroke="#3a3c41", size=15)
+    button("btn_q_install.svg", 160, 44, "QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
+    button("btn_q_update.svg", 160, 44, "UPD. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=13)
+    button("btn_q_remove.svg", 160, 44, "DEL. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=13)
+    button("btn_disabled.svg", 160, 44, "INSTALL", "#222326", "#5c5f65", "lock", stroke="#2e3034", size=16)
+    button("btn_reinstall.svg", 110, 44, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=13)
+    button("btn_remove.svg", 110, 44, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=13)
+    svg("info.svg", 44, 44, '<circle cx="22" cy="22" r="15" fill="none" stroke="#3d8bff" stroke-width="2.5"/>'
+        '<circle cx="22" cy="15.5" r="1.9" fill="#3d8bff"/><rect x="20.6" y="19.5" width="2.8" height="10" rx="1.4" fill="#3d8bff"/>')
+    svg("trash.svg", 44, 44, icon("trash", 10, 10, 24, MUTED, 2.2))
+    svg("trash_open.svg", 44, 44, '<rect x="1" y="1" width="42" height="42" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
+        + icon("trash", 10, 10, 24, "#ff7a72", 2.2))
+    svg("close.svg", 44, 44, '<rect x="1" y="1" width="42" height="42" rx="8" fill="#26272b" stroke="#3a3c41"/>'
+        '<path d="M15 15l14 14M29 15L15 29" stroke="%s" stroke-width="2.6" stroke-linecap="round"/>' % INK)
+    # badges: every combination of channel x high CPU x tested x old install, one 18 px frame each (engine: badge_index)
+    frames = ""
+    for i in range(24):
+        chan, cpu, tested, old = i // 8, (i >> 2) & 1, (i >> 1) & 1, i & 1
+        labels = ([BADGES[0]] if chan == 1 else [BADGES[1]] if chan == 2 else []) + ([BADGES[2]] if cpu else []) \
+            + ([BADGES[3]] if tested else []) + ([BADGES[4]] if old else [])
+        frames += badge_row(labels, i * 18, 18)
+    svg("badges.svg", 300, 18 * 24, frames)
+    # the scroll bar
+    svg("scroll_track.svg", 22, 400, '<rect x="8" y="0" width="6" height="400" rx="3" fill="#202124"/>')
+    svg("scroll_thumb.svg", 22, 60, '<rect x="3" y="0" width="16" height="60" rx="8" fill="#4a4c52"/>')
+    # the info overlay, and the empty states
+    svg("overlay.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
+        '<rect x="24" y="226" width="1184" height="1" fill="%s"/>' % LINE)
+    svg("offline.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>'
+        + icon("nowifi", 596, 100, 40, DIM, 2) + text(616, 190, "Can’t reach the plugin catalog", 24, INK, 700, "middle")
+        + text(616, 222, "Check the MPC’s network connection in Preferences, then refresh.", 17, DIM, 400, "middle"))
+    svg("empty.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>')
+    button("btn_refresh.svg", 170, 48, "REFRESH", "none", INK, "refresh", stroke=INK, size=18)
     svg("upd_badge.svg", 24, 24, '<circle cx="12" cy="12" r="12" fill="%s"/>' % AMBER)
-    # tabs and filter pills (the option names are drawn on top by the renderer)
-    svg("tab_off.svg", 190, 46, '<rect width="190" height="46" rx="6" fill="none"/>')
-    svg("tab_on.svg", 190, 46, '<rect x="0.5" y="0.5" width="189" height="45" rx="6" fill="#2a2b2f" stroke="#4a4c52"/>')
-    svg("pill_off.svg", 146, 44, '<rect x="0.5" y="0.5" width="145" height="43" rx="22" fill="none" stroke="#3a3c41"/>')
-    svg("pill_on.svg", 146, 44, '<rect x="0.5" y="0.5" width="145" height="43" rx="22" fill="#3a3c41" stroke="%s"/>' % INK)
-    # banners and empty states
     svg("banner.svg", 636, 36, '<rect x="0.5" y="0.5" width="635" height="35" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
         + icon("warn", 12, 10, 16, "#ff7a72", 2.5))
-    svg("offline.svg", 1232, 374, '<rect x="1" y="1" width="1230" height="372" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>'
-        + icon("nowifi", 596, 70, 40, DIM, 2) + text(616, 160, "Can’t reach the plugin catalog", 24, INK, 700, "middle")
-        + text(616, 192, "Check the MPC’s network connection in Preferences, then refresh.", 17, DIM, 400, "middle"))
-    svg("empty.svg", 1232, 374, '<rect x="1" y="1" width="1230" height="372" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>')
-    button("btn_refresh.svg", 170, 48, "REFRESH", "none", INK, "refresh", stroke=INK, size=18)
+    # view tabs (the option names are drawn on top by the renderer)
+    svg("tab_off.svg", 190, 46, '<rect width="190" height="46" rx="6" fill="none"/>')
+    svg("tab_on.svg", 190, 46, '<rect x="0.5" y="0.5" width="189" height="45" rx="6" fill="#2a2b2f" stroke="#4a4c52"/>')
     # footer
-    for side in ("left", "right"):
-        for name, colour in (("arrow_%s.svg" % side, INK), ("arrow_%s_dim.svg" % side, "#4a4c52")):
-            svg(name, 44, 44, '<rect x="0.5" y="0.5" width="43" height="43" rx="8" fill="none" stroke="#3a3c41"/>'
-                + icon(side, 12, 12, 20, colour))
-    button("updall_on.svg", 188, 52, "UPDATE ALL", "none", AMBER_TX, None, stroke=AMBER, size=18)
-    button("updall_off.svg", 188, 52, "UPDATE ALL", "none", "#4a4c52", None, stroke="#3a3c41", size=18)
-    button("apply_off.svg", 220, 52, "APPLY", "#2a2b2f", "#6b6e74")
-    button("apply_apply.svg", 220, 52, "APPLY", RED, "#ffffff")
-    button("apply_preparing.svg", 220, 52, "PREPARING…", "#2a2b2f", MUTED)
-    button("apply_ready.svg", 220, 52, "RESTART & APPLY", AMBER, "#1a1205", size=17)
-    button("apply_retry.svg", 220, 52, "RETRY", AMBER, "#1a1205", "refresh")
+    button("updall_on.svg", 170, 42, "UPDATE ALL", "none", AMBER_TX, None, stroke=AMBER, size=16)
+    button("updall_off.svg", 170, 42, "UPDATE ALL", "none", "#4a4c52", None, stroke="#3a3c41", size=16)
+    button("apply_off.svg", 210, 42, "APPLY", "#2a2b2f", "#6b6e74", size=17)
+    button("apply_apply.svg", 210, 42, "APPLY", RED, "#ffffff", size=17)
+    button("apply_preparing.svg", 210, 42, "PREPARING…", "#2a2b2f", MUTED, size=16)
+    button("apply_ready.svg", 210, 42, "RESTART & APPLY", AMBER, "#1a1205", size=15)
+    button("apply_retry.svg", 210, 42, "RETRY", AMBER, "#1a1205", "refresh", size=17)
     # the bars: one picture per step (MPC switches them); step 0 of the progress bar is empty, it shows only while downloading
     for k in range(11):
         svg("disk_%02d.svg" % k, 200, 5, '<rect width="%d" height="5" rx="2.5" fill="%s"/>' % (20 * k, DIM) if k else "")
