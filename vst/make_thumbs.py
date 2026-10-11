@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Bakes the list's plugin pictures: one 48x48 frame per catalog entry, taken from its screenshot (a square from the
-middle of it), or its initials when it has none. Frame 0 is the generic picture for entries newer than this build.
+"""Bakes the list's plugin pictures: one 140x69 frame per catalog entry (the plugin screen's own shape, about 2:1),
+its whole screenshot, or its initials when it has none. Frame 0 is the generic picture for entries newer than this build.
 Writes images/thumbs.png (frames stacked down), thumbs.txt (the ids in frame order, read by make_layout.py) and
 ../src/thumbs.h (the same ids for the engine). Needs Pillow and the network:  python3 vst/make_thumbs.py"""
 import io
@@ -13,7 +13,7 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG = "https://sd88me.github.io/mpc-vst-plugins/catalog.json"
-S = 48
+W, H = 140, 69
 MAX = 127   # the meter's filmstrip holds at most 128 frames (frame 0 + 127 plugins)
 BG, EDGE, INK = (36, 38, 42), (52, 54, 59), (236, 236, 237)
 
@@ -32,10 +32,10 @@ def font(size):
 
 
 def tile(text):
-    im = Image.new("RGB", (S, S), (12, 12, 13))
+    im = Image.new("RGB", (W, H), (12, 12, 13))
     d = ImageDraw.Draw(im)
-    d.rounded_rectangle((0, 0, S - 1, S - 1), 7, fill=BG, outline=EDGE)
-    d.text((S / 2, S / 2), text, font=font(20), fill=INK, anchor="mm")
+    d.rounded_rectangle((0, 0, W - 1, H - 1), 6, fill=BG, outline=EDGE)
+    d.text((W / 2, H / 2), text, font=font(26), fill=INK, anchor="mm")
     return im
 
 
@@ -47,14 +47,13 @@ def initials(name):
 
 def shot(url):
     im = Image.open(io.BytesIO(fetch(url))).convert("RGB")
-    w, h = im.size
-    side = min(w, h)
-    im = im.crop(((w - side) // 2, (h - side) // 2, (w - side) // 2 + side, (h - side) // 2 + side))
-    im = im.resize((S, S), Image.LANCZOS)
-    mask = Image.new("L", (S, S), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, S - 1, S - 1), 7, fill=255)
-    out = Image.new("RGB", (S, S), (12, 12, 13))
-    out.paste(im, (0, 0), mask)
+    im.thumbnail((W, H), Image.LANCZOS)   # the whole screen, its shape kept, centred in the frame
+    pic = Image.new("RGB", (W, H), (12, 12, 13))
+    pic.paste(im, ((W - im.size[0]) // 2, (H - im.size[1]) // 2))
+    mask = Image.new("L", (W, H), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, W - 1, H - 1), 5, fill=255)
+    out = Image.new("RGB", (W, H), (12, 12, 13))
+    out.paste(pic, (0, 0), mask)
     return out
 
 
@@ -71,9 +70,9 @@ def main():
                 print("  %s: %s" % (p["id"], e), file=sys.stderr)
         frames.append(pic or tile(initials(p["name"])))
         ids.append(p["id"])
-    strip = Image.new("RGB", (S, S * len(frames)))
+    strip = Image.new("RGB", (W, H * len(frames)))
     for i, f in enumerate(frames):
-        strip.paste(f, (0, i * S))
+        strip.paste(f, (0, i * H))
     strip.save(os.path.join(HERE, "images", "thumbs.png"), optimize=True)
     open(os.path.join(HERE, "thumbs.txt"), "w").write("\n".join(ids[1:]) + "\n")
     with open(os.path.join(HERE, "..", "src", "thumbs.h"), "w") as f:

@@ -67,14 +67,14 @@ def badge_row(labels, y, h):
     """labels side by side from the left, each only as wide as its text (and icon)"""
     out, x = "", 0.5
     for label, colour, edge, ic in labels:
-        w = text_w(label, 13) + 14 + (15 if ic else 0)
+        w = text_w(label, 16) + 16 + (19 if ic else 0)
         out += '<rect x="%g" y="%g" width="%g" height="%d" rx="4" fill="none" stroke="%s"/>' % (x, y + 0.5, w, h - 1, edge)
-        tx = x + 7
+        tx = x + 8
         if ic:
-            out += icon(ic, x + 5, y + 2.5, 13, colour, 2.5)
-            tx += 15
-        out += text(tx, y + h / 2 + 4.6, label, 13, colour, 600)
-        x += w + 6
+            out += icon(ic, x + 6, y + 3, 16, colour, 2.5)
+            tx += 19
+        out += text(tx, y + h / 2 + 5.6, label, 16, colour, 600)
+        x += w + 7
     return out
 
 
@@ -87,48 +87,49 @@ def main():
         '<rect width="1280" height="628" fill="%s"/>' % BG
         + '<rect width="1280" height="60" fill="%s"/><rect y="60" width="1280" height="1" fill="%s"/>' % (PANEL, LINE)
         + grid + text(66, 39, "PLUGIN MANAGER", 24, INK, 700, spacing=3)
-        + '<rect x="1036" y="15" width="1" height="30" fill="#2e3034"/>'
-        + text(1056, 26, "INTERNAL STORAGE", 14, MUTED, 600, spacing=1)
-        + '<rect x="1056" y="37" width="200" height="5" rx="2.5" fill="#2a2b2f"/>'
+        + '<rect x="956" y="15" width="1" height="30" fill="#2e3034"/>'
+        + text(976, 26, "INTERNAL STORAGE", 16, MUTED, 600, spacing=1)
+        + '<rect x="976" y="36" width="280" height="5" rx="2.5" fill="#2a2b2f"/>'
         + '<rect x="24" y="64" width="580" height="56" rx="8" fill="%s" stroke="%s"/>' % (PANEL, LINE)
         + '<rect x="1230" y="122" width="22" height="400" rx="11" fill="none"/>'
         + '<rect y="566" width="1280" height="62" fill="%s"/><rect y="566" width="1280" height="1" fill="%s"/>' % (PANEL, LINE))
-    svg("net_on.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="#3fbf7f"/>' + text(16, 17, "ONLINE", 15, MUTED, 600, spacing=1))
-    svg("net_off.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="%s"/>' % RED + text(16, 17, "OFFLINE", 15, "#ff9a93", 600, spacing=1))
+    svg("net_on.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="#3fbf7f"/>' + text(16, 18, "ONLINE", 17, MUTED, 600, spacing=1))
+    svg("net_off.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="%s"/>' % RED + text(16, 18, "OFFLINE", 17, "#ff9a93", 600, spacing=1))
     # a list row (the list tile's own picture; the plugin picture sits on its left)
     for name, fill, edge in (("row_off.svg", PANEL, "#222326"), ("row_on.svg", "#1d1e21", RED)):
-        svg(name, 1190, 72, '<rect x="1" y="1" width="1188" height="70" rx="8" fill="%s" stroke="%s" stroke-width="2"/>' % (fill, edge))
+        svg(name, 1190, 102, '<rect x="1" y="1" width="1188" height="100" rx="8" fill="%s" stroke="%s" stroke-width="2"/>' % (fill, edge))
+    svg("hit.svg", 140, 69, '<rect width="140" height="69" fill="#000000" fill-opacity="0.01"/>')   # the picture's tap area
     # row buttons
-    button("btn_install.svg", 160, 44, "INSTALL", RED, "#ffffff", "down", size=16)
-    button("btn_update.svg", 160, 44, "UPDATE", AMBER, "#1a1205", "refresh", size=16)
-    button("btn_installed.svg", 160, 44, "INSTALLED", "none", "#c9ccd1", "check", stroke="#3a3c41", size=15)
-    button("btn_q_install.svg", 160, 44, "QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
-    button("btn_q_update.svg", 160, 44, "UPD. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=13)
-    button("btn_q_remove.svg", 160, 44, "DEL. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=13)
-    button("btn_disabled.svg", 160, 44, "INSTALL", "#222326", "#5c5f65", "lock", stroke="#2e3034", size=16)
-    button("btn_reinstall.svg", 110, 44, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=13)
-    button("btn_remove.svg", 110, 44, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=13)
-    svg("info.svg", 44, 44, '<circle cx="22" cy="22" r="15" fill="none" stroke="#3d8bff" stroke-width="2.5"/>'
-        '<circle cx="22" cy="15.5" r="1.9" fill="#3d8bff"/><rect x="20.6" y="19.5" width="2.8" height="10" rx="1.4" fill="#3d8bff"/>')
-    svg("trash.svg", 44, 44, icon("trash", 10, 10, 24, MUTED, 2.2))
-    svg("trash_open.svg", 44, 44, '<rect x="1" y="1" width="42" height="42" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
-        + icon("trash", 10, 10, 24, "#ff7a72", 2.2))
-    svg("close.svg", 44, 44, '<rect x="1" y="1" width="42" height="42" rx="8" fill="#26272b" stroke="#3a3c41"/>'
-        '<path d="M15 15l14 14M29 15L15 29" stroke="%s" stroke-width="2.6" stroke-linecap="round"/>' % INK)
+    button("btn_install.svg", 170, 50, "INSTALL", RED, "#ffffff", "down", size=18)
+    button("btn_update.svg", 170, 50, "UPDATE", AMBER, "#1a1205", "refresh", size=18)
+    button("btn_installed.svg", 170, 50, "INSTALLED", "none", "#c9ccd1", "check", stroke="#3a3c41", size=17)
+    button("btn_q_install.svg", 170, 50, "QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=17)
+    button("btn_q_update.svg", 170, 50, "UPD. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
+    button("btn_q_remove.svg", 170, 50, "DEL. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
+    button("btn_disabled.svg", 170, 50, "INSTALL", "#222326", "#5c5f65", "lock", stroke="#2e3034", size=18)
+    button("btn_reinstall.svg", 124, 50, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=15)
+    button("btn_remove.svg", 124, 50, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=15)
+    svg("info.svg", 50, 50, '<circle cx="25" cy="25" r="17" fill="none" stroke="#3d8bff" stroke-width="2.8"/>'
+        '<circle cx="25" cy="17.5" r="2.2" fill="#3d8bff"/><rect x="23.4" y="22" width="3.2" height="11.5" rx="1.6" fill="#3d8bff"/>')
+    svg("trash.svg", 50, 50, icon("trash", 11, 11, 28, MUTED, 2.2))
+    svg("trash_open.svg", 50, 50, '<rect x="1" y="1" width="48" height="48" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
+        + icon("trash", 11, 11, 28, "#ff7a72", 2.2))
+    svg("close.svg", 50, 50, '<rect x="1" y="1" width="48" height="48" rx="8" fill="#26272b" stroke="#3a3c41"/>'
+        '<path d="M17 17l16 16M33 17L17 33" stroke="%s" stroke-width="3" stroke-linecap="round"/>' % INK)
     # badges: every combination of channel x high CPU x tested x old install, one 18 px frame each (engine: badge_index)
     frames = ""
     for i in range(24):
         chan, cpu, tested, old = i // 8, (i >> 2) & 1, (i >> 1) & 1, i & 1
         labels = ([BADGES[0]] if chan == 1 else [BADGES[1]] if chan == 2 else []) + ([BADGES[2]] if cpu else []) \
             + ([BADGES[3]] if tested else []) + ([BADGES[4]] if old else [])
-        frames += badge_row(labels, i * 18, 18)
-    svg("badges.svg", 300, 18 * 24, frames)
+        frames += badge_row(labels, i * 22, 22)
+    svg("badges.svg", 380, 22 * 24, frames)
     # the scroll bar
     svg("scroll_track.svg", 22, 400, '<rect x="8" y="0" width="6" height="400" rx="3" fill="#202124"/>')
     svg("scroll_thumb.svg", 22, 60, '<rect x="3" y="0" width="16" height="60" rx="8" fill="#4a4c52"/>')
     # the info overlay, and the empty states
-    svg("overlay.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
-        '<rect x="24" y="226" width="1184" height="1" fill="%s"/>' % LINE)
+    svg("overlay.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
+        '<rect x="24" y="238" width="1184" height="1" fill="%s"/>' % LINE)
     svg("offline.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>'
         + icon("nowifi", 596, 100, 40, DIM, 2) + text(616, 190, "Can’t reach the plugin catalog", 24, INK, 700, "middle")
         + text(616, 222, "Check the MPC’s network connection in Preferences, then refresh.", 17, DIM, 400, "middle"))
@@ -137,6 +138,21 @@ def main():
     svg("upd_badge.svg", 24, 24, '<circle cx="12" cy="12" r="12" fill="%s"/>' % AMBER)
     svg("banner.svg", 636, 36, '<rect x="0.5" y="0.5" width="635" height="35" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
         + icon("warn", 12, 10, 16, "#ff7a72", 2.5))
+    # search field (its text is drawn live on top), clear button, the keyboard overlay and its keys
+    svg("search_field.svg", 410, 46, '<rect x="1" y="1" width="408" height="44" rx="22" fill="%s" stroke="#3a3c41" stroke-width="2"/>' % PANEL
+        + '<g transform="translate(16 11)" fill="none" stroke="%s" stroke-width="2.4" stroke-linecap="round">'
+          '<circle cx="10" cy="10" r="7.5"/><path d="M15.5 15.5L22 22"/></g>' % DIM)
+    svg("search_x.svg", 40, 40, '<circle cx="20" cy="20" r="14" fill="#3a3c41"/>'
+        '<path d="M14 14l12 12M26 14L14 26" stroke="%s" stroke-width="2.6" stroke-linecap="round"/>' % INK)
+    svg("overlay_kb.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
+        '<rect x="24" y="72" width="1184" height="1" fill="%s"/>' % LINE)
+    for ch in "1234567890QWERTYUIOPASDFGHJKLZXCVBNM":
+        svg("key_%s.svg" % ch, 64, 56, '<rect x="1" y="1" width="62" height="54" rx="8" fill="#26272b" stroke="#3a3c41" stroke-width="2"/>'
+            + text(32, 37, ch, 26, INK, 600, "middle"))
+    for k, label, w, fill, tx in (("space", "SPACE", 300, "#26272b", INK), ("back", "DELETE", 130, "#26272b", INK),
+                                  ("clear", "CLEAR", 130, "#2a1514", "#ff7a72"), ("done", "DONE", 150, RED, "#ffffff")):
+        svg("key_%s.svg" % k, w, 56, '<rect x="1" y="1" width="%d" height="54" rx="8" fill="%s" stroke="#3a3c41" stroke-width="2"/>' % (w - 2, fill)
+            + text(w / 2, 36, label, 20, tx, 700, "middle", spacing=1.2))
     # view tabs (the option names are drawn on top by the renderer)
     svg("tab_off.svg", 190, 46, '<rect width="190" height="46" rx="6" fill="none"/>')
     svg("tab_on.svg", 190, 46, '<rect x="0.5" y="0.5" width="189" height="45" rx="6" fill="#2a2b2f" stroke="#4a4c52"/>')
@@ -150,7 +166,7 @@ def main():
     button("apply_retry.svg", 210, 42, "RETRY", AMBER, "#1a1205", "refresh", size=17)
     # the bars: one picture per step (MPC switches them); step 0 of the progress bar is empty, it shows only while downloading
     for k in range(11):
-        svg("disk_%02d.svg" % k, 200, 5, '<rect width="%d" height="5" rx="2.5" fill="%s"/>' % (20 * k, DIM) if k else "")
+        svg("disk_%02d.svg" % k, 280, 5, '<rect width="%d" height="5" rx="2.5" fill="%s"/>' % (28 * k, DIM) if k else "")
     for k in range(21):
         svg("progress_%02d.svg" % k, 360, 4, ('<rect width="360" height="4" rx="2" fill="#2a2b2f"/>'
                                               '<rect width="%d" height="4" rx="2" fill="%s"/>' % (18 * k, RED)) if k else "")

@@ -23,7 +23,7 @@ static void cpress(const char *f) { cset(f, "1"); cset(f, "0"); }
 
 static void cards(void) {
   printf("  [%c scroll %s] %s | foot %s: %s | apply_state %s\n", cat, cget("scroll"), cget("count"), get("foot"), get("status"), get("apply_state"));
-  for (int r = 1; r <= 6; r++) {
+  for (int r = 1; r <= 4; r++) {
     char k[32];
     #define F(f) (snprintf(k, sizeof k, "r%d_" f, r), cget(k))
     snprintf(k, sizeof k, "card%d_1", r);

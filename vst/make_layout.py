@@ -8,10 +8,12 @@ import os
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATS = [("a", "ALL"), ("i", "INSTRUMENTS"), ("e", "EFFECTS"), ("d", "ADDINS")]
-ROWS, ROW_Y, ROW_H, ROW_STEP = 6, 208, 72, 73
+ROWS, ROW_Y, ROW_H, ROW_STEP = 4, 208, 102, 108
 STATES = ["none", "install", "update", "installed", "q_install", "q_update", "q_remove", "disabled", "menu"]
 NBADGES = 24   # channel (none, stable, beta) x high CPU x tested x old install: make_images.py draws them
 INFO_LINES = 8
+KEY_ROWS = ["1234567890", "QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"]   # the search keyboard (MPC has none for plugins)
+SPECIAL = [("space", "Space", 300), ("back", "Delete", 130), ("clear", "Clear", 130), ("done", "Done", 150)]
 
 
 def ro(key, name):
@@ -43,7 +45,16 @@ def params(nthumbs):
          opt("upd_all", "Update all on", ["off", "on"]),
          trig("apply", "Apply"),
          opt("apply_state", "Apply state", ["off", "apply", "preparing", "ready", "retry"]),
-         trig("noop", "Badge")]
+         trig("noop", "Badge"),
+         trig("search", "Search"),
+         ro("search_txt", "Search text"),
+         opt("search_on", "Search set", ["off", "on"]),
+         trig("search_clear", "Search clear"),
+         opt("kb", "Keyboard", ["off", "on"]),
+         ro("kb_txt", "Keyboard text"),
+         ro("kb_count", "Keyboard matches")]
+    p += [trig("kb_" + ch, "Key " + ch) for row in KEY_ROWS for ch in row]
+    p += [trig("kb_" + k, "Key " + name) for k, name, _w in SPECIAL]
     thumbs = ["%d" % k for k in range(nthumbs)]
     for c, title in CATS:
         t = title.title()
@@ -92,18 +103,20 @@ art_css=skin.css
 def tab(c, title, nthumbs):
     L = ["", "[tab %s]" % title, "art file=images/bg.svg"]
     # header (shared): logo and title are in bg.svg; online status, internal storage
-    L += ["art file=images/net_on.svg x=880 y=104 w=100 h=24 when=net:online",
-          "art file=images/net_off.svg x=880 y=104 w=100 h=24 when=net:offline",
-          "readout box=0 w=120 h=23 cx=1196 cy=107 label=\"\" key=disk_txt tsize=21 tcolor=ececed talign=right tpad=0",
-          "picture x=1056 y=123 w=200 h=5 key=disk files=\"%s\"" % ",".join("images/disk_%02d.svg" % k for k in range(11))]
+    L += ["art file=images/net_on.svg x=820 y=104 w=100 h=24 when=net:online",
+          "art file=images/net_off.svg x=820 y=104 w=100 h=24 when=net:offline",
+          "readout box=0 w=130 h=28 cx=1191 cy=106 label=\"\" key=disk_txt tsize=25 tcolor=ececed talign=right tpad=0",
+          "picture x=976 y=122 w=280 h=5 key=disk files=\"%s\"" % ",".join("images/disk_%02d.svg" % k for k in range(11))]
     # view tabs (shared) and the device problem banner
     L += ["enum_h cx=314 cy=178 sw=188 sh=46 key=tab img=images/tab_off.svg img_on=images/tab_on.svg",
           "button cx=578 cy=178 label=\"\" key=noop img=images/upd_badge.svg w=24 h=24 when=upd_badge:on",
           "readout box=0 w=24 h=25 cx=578 cy=178 label=\"\" key=upd_count tsize=23 tweight=bold tcolor=1a1205 talign=center tpad=0 when=upd_badge:on",
+          "button cx=1050 cy=178 label=\"\" key=search img=images/search_field.svg w=410 h=46 get=search_txt tsize=26 when=problem:no",
+          "button cx=1228 cy=178 label=\"\" key=search_clear img=images/search_x.svg w=40 h=40 when=search_on:on",
           "art file=images/banner.svg x=620 y=160 w=636 h=36 when=problem:yes",
           "readout box=0 w=590 h=30 cx=957 cy=178 label=\"\" key=problem_txt tsize=23 tcolor=ffb4ae tpad=0 when=problem:yes"]
     # empty states
-    L += ["art file=images/offline.svg x=24 y=208 w=1232 h=438 when=%s_empty:offline" % c,
+    L += ["art file=images/offline.svg x=24 y=208 w=1232 h=436 when=%s_empty:offline" % c,
           "button cx=640 cy=490 label=\"\" key=refresh img=images/btn_refresh.svg w=170 h=48 when=%s_empty:offline" % c,
           "art file=images/empty.svg x=24 y=208 w=1232 h=438 when=%s_empty:empty" % c,
           "readout box=0 w=800 h=32 cx=640 cy=427 label=\"\" key=%s_empty_txt tsize=30 tweight=regular tcolor=9da1a7 talign=center tpad=0" % c]
@@ -114,41 +127,56 @@ def tab(c, title, nthumbs):
         k = "%s_r%d_" % (c, r)
         L += ["",
               "list x=24 y=%d w=1190 h=%d cols=1 rows=1 th=%d gap=0 key=%s_card%d img=images/row_off.svg img_on=images/row_on.svg "
-              "tx=72 ty=3 ttw=560 tth=30 tsize=27 tweight=bold tcolor=ececed when=%svis:on" % (y, ROW_H, ROW_H, c, r, k),
-              "meter cx=54 cy=%d w=48 h=48 key=%simg strip=images/thumbs.png frames=%d when=%svis:on" % (cy, k, nthumbs, k),
-              "readout box=0 w=560 h=19 cx=376 cy=%d label=\"\" key=%smeta tsize=18 tweight=regular tcolor=b4b7bc tpad=0" % (y + 41, k),
-              "meter cx=246 cy=%d w=300 h=18 key=%sbadges strip=images/badges.svg frames=%d when=%svis:on" % (y + 61, k, NBADGES, k),
-              "readout box=0 w=140 h=24 cx=760 cy=%d label=\"\" key=%sver tsize=22 tcolor=ececed tpad=0" % (y + 24, k),
-              "readout box=0 w=140 h=19 cx=760 cy=%d label=\"\" key=%ssize tsize=18 tweight=regular tcolor=9da1a7 tpad=0" % (y + 49, k)]
+              "tx=170 ty=8 ttw=480 tth=38 tsize=34 tweight=bold tcolor=ececed when=%svis:on" % (y, ROW_H, ROW_H, c, r, k),
+              # the plugin picture; a tap on it opens the info overlay like the (i) button
+              "meter cx=104 cy=%d w=140 h=69 key=%simg strip=images/thumbs.png frames=%d when=%svis:on" % (cy, k, nthumbs, k),
+              "button cx=104 cy=%d label=\"\" key=%sinfo img=images/hit.svg w=140 h=69 when=%svis:on" % (cy, k, k),
+              "readout box=0 w=480 h=26 cx=434 cy=%d label=\"\" key=%smeta tsize=24 tweight=regular tcolor=b4b7bc talign=left tpad=0" % (y + 60, k),
+              "meter cx=384 cy=%d w=380 h=22 key=%sbadges strip=images/badges.svg frames=%d when=%svis:on" % (y + 86, k, NBADGES, k),
+              "readout box=0 w=170 h=30 cx=740 cy=%d label=\"\" key=%sver tsize=28 tcolor=ececed tpad=0" % (y + 38, k),
+              "readout box=0 w=170 h=26 cx=740 cy=%d label=\"\" key=%ssize tsize=24 tweight=regular tcolor=9da1a7 tpad=0" % (y + 68, k),
+              "button cx=860 cy=%d label=\"\" key=%sinfo img=images/info.svg w=50 h=50 when=%svis:on" % (cy, k, k)]
         for st in STATES[1:-1]:
-            L.append("button cx=950 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=160 h=44 when=%sstate:%s" % (cy, k, st, k, st))
-        L += ["button cx=885 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=110 h=44 when=%sstate:menu" % (cy, k, k),
-              "button cx=1005 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=110 h=44 when=%sstate:menu" % (cy, k, k),
-              "button cx=1100 cy=%d label=\"\" key=%sinfo img=images/info.svg w=44 h=44 when=%svis:on" % (cy, k, k),
-              "button cx=1165 cy=%d label=\"\" key=%sdel img=images/trash.svg w=44 h=44 when=%strash:on" % (cy, k, k),
-              "button cx=1165 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=44 h=44 when=%strash:open" % (cy, k, k)]
+            L.append("button cx=990 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=170 h=50 when=%sstate:%s" % (cy, k, st, k, st))
+        L += ["button cx=956 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=124 h=50 when=%sstate:menu" % (cy, k, k),
+              "button cx=1086 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=124 h=50 when=%sstate:menu" % (cy, k, k),
+              "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash.svg w=50 h=50 when=%strash:on" % (cy, k, k),
+              "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=50 h=50 when=%strash:open" % (cy, k, k)]
     # the scroll bar: drag it, or turn the data wheel while it has focus
     L += ["", "slider_v cx=1241 cy=408 w=22 h=400 bw=36 ns=0 vs=12 label=\"\" key=%s_scroll img=images/scroll_thumb.svg "
               "base=images/scroll_track.svg when=%s_ov:off" % (c, c)]
-    # the info overlay (over the list; the rows hide while it shows)
-    L += ["", "art file=images/overlay.svg x=24 y=208 w=1232 h=438 when=%s_ov:on" % c,
-          "button cx=1222 cy=242 label=\"\" key=%s_info_close img=images/close.svg w=44 h=44 when=%s_ov:on" % (c, c),
-          "meter cx=78 cy=252 w=48 h=48 key=%s_info_img strip=images/thumbs.png frames=%d when=%s_ov:on" % (c, nthumbs, c),
-          "readout box=0 w=900 h=34 cx=566 cy=240 label=\"\" key=%s_info_name tsize=32 tweight=bold tcolor=ececed tpad=0" % c,
-          "readout box=0 w=900 h=22 cx=566 cy=268 label=\"\" key=%s_info_by tsize=20 tweight=regular tcolor=b4b7bc tpad=0" % c]
+    # the info overlay (over the list; the rows hide while it shows). It ends above the footer's text, whose when=
+    # images reach up to y 631.
+    L += ["", "art file=images/overlay.svg x=24 y=208 w=1232 h=420 when=%s_ov:on" % c,
+          "button cx=1222 cy=244 label=\"\" key=%s_info_close img=images/close.svg w=50 h=50 when=%s_ov:on" % (c, c),
+          "meter cx=118 cy=258 w=140 h=69 key=%s_info_img strip=images/thumbs.png frames=%d when=%s_ov:on" % (c, nthumbs, c),
+          "readout box=0 w=900 h=42 cx=660 cy=244 label=\"\" key=%s_info_name tsize=40 tweight=bold tcolor=ececed talign=left tpad=0" % c,
+          "readout box=0 w=900 h=30 cx=660 cy=280 label=\"\" key=%s_info_by tsize=27 tweight=regular tcolor=b4b7bc talign=left tpad=0" % c]
     for d in range(4):
-        L.append("readout box=0 w=1180 h=24 cx=640 cy=%d label=\"\" key=%s_info_d%d tsize=21 tweight=regular tcolor=ececed tpad=0"
-                 % (310 + d * 27, c, d + 1))
+        L.append("readout box=0 w=1180 h=32 cx=638 cy=%d label=\"\" key=%s_info_d%d tsize=29 tweight=regular tcolor=ececed talign=left tpad=0"
+                 % (322 + d * 31, c, d + 1))
     for l in range(INFO_LINES):
         col, row = divmod(l, INFO_LINES // 2)
-        L.append("readout box=0 w=580 h=22 cx=%d cy=%d label=\"\" key=%s_info_l%d tsize=20 tweight=regular tcolor=c9ccd1 tpad=0"
-                 % (340 + col * 600, 452 + row * 30, c, l + 1))
+        L.append("readout box=0 w=580 h=30 cx=%d cy=%d label=\"\" key=%s_info_l%d tsize=27 tweight=regular tcolor=c9ccd1 talign=left tpad=0"
+                 % (338 + col * 600, 472 + row * 36, c, l + 1))
+    # the search keyboard (shared by the four tabs; the rows hide while it shows)
+    L += ["", "art file=images/overlay_kb.svg x=24 y=208 w=1232 h=420 when=kb:on",
+          "readout box=0 w=760 h=46 cx=444 cy=250 label=\"\" key=kb_txt tsize=42 tweight=bold tcolor=ececed talign=left tpad=0",
+          "readout box=0 w=300 h=30 cx=1060 cy=250 label=\"\" key=kb_count tsize=27 tweight=regular tcolor=b4b7bc talign=right tpad=0"]
+    for ri, row in enumerate(KEY_ROWS):
+        x0 = 640 - (len(row) * 70 - 6) // 2 + 32
+        for ki, ch in enumerate(row):
+            L.append("button cx=%d cy=%d label=\"\" key=kb_%s img=images/key_%s.svg w=64 h=56 when=kb:on" % (x0 + ki * 70, 318 + ri * 64, ch, ch))
+    x = 640 - (sum(w for _k, _n, w in SPECIAL) + 6 * (len(SPECIAL) - 1)) // 2
+    for k, _name, w in SPECIAL:
+        L.append("button cx=%d cy=574 label=\"\" key=kb_%s img=images/key_%s.svg w=%d h=56 when=kb:on" % (x + w // 2, k, k, w))
+        x += w + 6
     # footer: counts (or a warning), progress while downloading, UPDATE ALL, APPLY
     L += ["",
-          "readout box=0 w=600 h=24 cx=330 cy=679 label=\"\" key=%s_count tsize=22 tweight=regular tcolor=ececed tpad=0 when=foot:counts" % c,
-          "readout box=0 w=600 h=24 cx=330 cy=679 label=\"\" key=status tsize=22 tweight=regular tcolor=f0b44a tpad=0 when=foot:warn",
-          "readout box=0 w=600 h=24 cx=330 cy=679 label=\"\" key=status tsize=22 tweight=regular tcolor=ff7a72 tpad=0 when=foot:error",
-          "picture x=30 y=698 w=360 h=4 key=progress files=\"%s\"" % ",".join("images/progress_%02d.svg" % k for k in range(21)),
+          "readout box=0 w=600 h=30 cx=330 cy=684 label=\"\" key=%s_count tsize=28 tweight=regular tcolor=ececed tpad=0 when=foot:counts" % c,
+          "readout box=0 w=600 h=30 cx=330 cy=684 label=\"\" key=status tsize=26 tweight=regular tcolor=f0b44a tpad=0 when=foot:warn",
+          "readout box=0 w=600 h=30 cx=330 cy=684 label=\"\" key=status tsize=26 tweight=regular tcolor=ff7a72 tpad=0 when=foot:error",
+          "picture x=30 y=706 w=360 h=4 key=progress files=\"%s\"" % ",".join("images/progress_%02d.svg" % k for k in range(21)),
           "button cx=930 cy=684 label=\"\" key=update_all img=images/updall_on.svg w=170 h=42 when=upd_all:on",
           "button cx=930 cy=684 label=\"\" key=update_all img=images/updall_off.svg w=170 h=42 when=upd_all:off"]
     for st in ("off", "apply", "preparing", "ready", "retry"):

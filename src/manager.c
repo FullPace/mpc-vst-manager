@@ -51,7 +51,7 @@ typedef struct {
 #define CATALOG_URL "https://sd88me.github.io/mpc-vst-plugins/catalog.json"   /* tests: a file:// fixture */
 #endif
 #define WORK "/tmp/pluginmgr"
-#define ROWS 6      /* list rows on screen; the scroll bar moves them through the list */
+#define ROWS 4      /* list rows on screen; the scroll bar moves them through the list */
 #define NCAT 4      /* MPC tabs: all, instruments, effects, addins (params a_, i_, e_, d_) */
 #ifndef ADDINS_DIR
 #define ADDINS_DIR "/data/mpc-addins"   /* one folder per addin id, as mpc-vst-plugins' addin installer lays them out */
@@ -91,6 +91,10 @@ typedef struct {
     cat_t cat[NCAT];              /* one list per MPC tab: MPC doesn't say which tab shows, so all four are kept */
     int npkg, sel;                /* sel: the selected row's pkg index (-1 none) */
     int tab;                      /* 0 discover, 1 installed, 2 updates (shared by the four MPC tabs) */
+    char query[40];               /* the search (typed on the plugin's own keyboard): filters all four lists */
+    int kb;                       /* the search keyboard is open */
+    char last_key[24];            /* debounce: the last row trigger taken, and when (see mgr_set_param) */
+    struct timespec last_t;
     int online, loaded, failed;   /* catalog reachable; ever loaded; the last APPLY failed (offer RETRY) */
     int sticky, status_kind;      /* status set by the worker or an action (else the queue summary); 0 ok, 1 warn, 2 error */
     int downloading;
@@ -1026,6 +1030,21 @@ static int in_cat(const pkg_t *p, int c) {
 
 static int max_top(const cat_t *c) { return c->nview > ROWS ? c->nview - ROWS : 0; }
 
+/* the search: every word of it in the name, author, style or tags (any case) */
+static int matches(const pkg_t *p, const char *query) {
+    char w[40];
+    for (const char *q = query; *q;) {
+        while (*q == ' ') q++;
+        int n = 0;
+        while (q[n] && q[n] != ' ' && n < (int)sizeof w - 1) n++;
+        if (!n) break;
+        snprintf(w, sizeof w, "%.*s", n, q);
+        q += n;
+        if (!strcasestr(p->name, w) && !strcasestr(p->author, w) && !strcasestr(p->style, w) && !strcasestr(p->alltags, w)) return 0;
+    }
+    return 1;
+}
+
 /* Each MPC tab's rows for the current view tab; build-yourself plugins (no download) are left out: not plug and play.
  * Called with mu held, after a refresh and on a view tab change: what decides it (kind, url, installed, latest) only
  * changes with a refresh. Each view has room for npkg entries. */
@@ -1035,7 +1054,7 @@ static void rebuild_views(mgr_t *m) {
         int n = 0;
         for (int i = 0; ct->view && i < m->npkg; i++) {
             const pkg_t *p = &m->pkg[i];
-            if (!p->url[0] || !in_cat(p, c)) continue;
+            if (!p->url[0] || !in_cat(p, c) || !matches(p, m->query)) continue;
             if (m->tab == 1 && !installed(p)) continue;
             if (m->tab == 2 && !has_update(p)) continue;
             ct->view[n++] = i;
@@ -1145,7 +1164,7 @@ static void info_field(const mgr_t *m, int i, const char *f, char *b, int n) {
         spaced(p->style, st, sizeof st);
         snprintf(b, n, "by %s  \xc2\xb7  %s%s%s", p->author, is_addin(p) ? "Addin" : !strcmp(p->kind, "effect") ? "Effect" : "Instrument",
                  st[0] ? "  \xc2\xb7  " : "", st);
-    } else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') wrap_line(p->summary[0] ? p->summary : "No description in the catalog.", f[1] - '1', 4, 100, b, n);
+    } else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') wrap_line(p->summary[0] ? p->summary : "No description in the catalog.", f[1] - '1', 4, 90, b, n);
     else if (f[0] == 'l') {
         switch (atoi(f + 1)) {
         case 1: snprintf(b, n, "Version  %s  \xc2\xb7  %s%s%s", p->latest, !strcmp(p->channel, "beta") ? "beta" : "stable",
@@ -1221,17 +1240,31 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
     double v = atof(val);
     pthread_mutex_lock(&m->mu);
     int busy = m->busy == J_PREPARE || m->busy == J_LAUNCH, c = cat_of(key);
+    /* A row button that changes its picture (INSTALL -> QUEUED, the trash and its open state) is another control on
+     * the same parameter: the new one, under the finger still on the screen, fires again. So a row trigger counts
+     * once per 600 ms. */
+    if (c >= 0 && key[2] == 'r' && v >= 0.5) {
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        long ms = (now.tv_sec - m->last_t.tv_sec) * 1000 + (now.tv_nsec - m->last_t.tv_nsec) / 1000000;
+        if (!strcmp(key, m->last_key) && ms < 600) { pthread_mutex_unlock(&m->mu); return; }
+        snprintf(m->last_key, sizeof m->last_key, "%s", key);
+        m->last_t = now;
+    }
     if (!strcmp(key, "tab")) {   /* an option param: the index as a number */
-        m->tab = (int)(v + 0.5);
-        rebuild_views(m);
-        for (int k = 0; k < NCAT; k++) { m->cat[k].top = 0; m->cat[k].menu = m->cat[k].info = -1; }
+        int o = (int)(v + 0.5);
+        if (o != m->tab) {   /* MPC also sends the value back after the engine reports it: only a real change resets */
+            m->tab = o;
+            rebuild_views(m);
+            for (int k = 0; k < NCAT; k++) { m->cat[k].top = 0; m->cat[k].menu = m->cat[k].info = -1; }
+        }
     } else if (c >= 0) {
         cat_t *ct = &m->cat[c];
         const char *f = key + 2;
         if (!strcmp(f, "scroll")) {   /* the bar's top is the list's start */
             int t = (int)((100.0 - v) * max_top(ct) / 100.0 + 0.5);
-            ct->top = t < 0 ? 0 : t > max_top(ct) ? max_top(ct) : t;
-            ct->menu = -1;
+            t = t < 0 ? 0 : t > max_top(ct) ? max_top(ct) : t;
+            if (t != ct->top) { ct->top = t; ct->menu = -1; }   /* an echo of the current position changes nothing */
         } else if (!strncmp(f, "card", 4)) {   /* a tap anywhere on a row selects it (both toggle directions) */
             int k = ct->top + f[4] - '1';
             if (ct->info < 0 && k >= 0 && k < ct->nview) { m->sel = ct->view[k]; if (ct->menu != m->sel) ct->menu = -1; }
@@ -1264,6 +1297,19 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
         }
     } else if (v < 0.5) {
         /* the shared triggers: act on press only */
+    } else if (!strcmp(key, "search")) {
+        m->kb = 1;
+        for (int k = 0; k < NCAT; k++) m->cat[k].menu = m->cat[k].info = -1;
+    } else if (!strcmp(key, "search_clear") || !strcmp(key, "kb_clear") || !strncmp(key, "kb_", 3)) {
+        size_t len = strlen(m->query);
+        const char *k = key + 3;
+        if (!strcmp(key, "search_clear") || !strcmp(k, "clear")) m->query[0] = 0;
+        else if (!strcmp(k, "done")) m->kb = 0;
+        else if (!strcmp(k, "back")) { if (len) m->query[len - 1] = 0; }
+        else if (!strcmp(k, "space")) { if (len && m->query[len - 1] != ' ' && len + 1 < sizeof m->query) strcat(m->query, " "); }
+        else if (k[0] && !k[1] && len + 1 < sizeof m->query) { m->query[len] = (char)tolower((unsigned char)k[0]); m->query[len + 1] = 0; }
+        rebuild_views(m);
+        for (int t = 0; t < NCAT; t++) m->cat[t].top = 0;
     } else if (!strcmp(key, "refresh")) post(m, J_REFRESH);
     else if (!strcmp(key, "update_all") && !busy) {
         for (int i = 0; i < m->npkg; i++) if (has_update(&m->pkg[i]) && !m->pkg[i].queued) requeue(m, &m->pkg[i], Q_INSTALL);
@@ -1282,12 +1328,12 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
     if (c >= 0) {
         const cat_t *ct = &m->cat[c];
         const char *f = key + 2;
-        int nv = ct->nview;
+        int nv = ct->nview, hide = ct->info >= 0 || m->kb;   /* an overlay covers the rows */
         if (!strcmp(f, "scroll")) snprintf(b, n, "%d", max_top(ct) ? 100 - ct->top * 100 / max_top(ct) : 100);
         else if (!strcmp(f, "scroll_display")) snprintf(b, n, " ");
-        else if (!strcmp(f, "empty")) snprintf(b, n, "%d", ct->info >= 0 ? 0 : !m->loaded ? (m->online || m->busy == J_REFRESH ? 0 : 1) : nv == 0 ? 2 : 0);
+        else if (!strcmp(f, "empty")) snprintf(b, n, "%d", hide ? 0 : !m->loaded ? (m->online || m->busy == J_REFRESH ? 0 : 1) : nv == 0 ? 2 : 0);
         else if (!strcmp(f, "empty_txt"))
-            snprintf(b, n, "%s", !m->loaded || nv || ct->info >= 0 ? " " : m->tab == 2 ? "Everything is up to date"
+            snprintf(b, n, "%s", !m->loaded || nv || hide ? " " : m->query[0] ? "No plugins match the search" : m->tab == 2 ? "Everything is up to date"
                                  : m->tab == 1 ? (c == 3 ? "No addins installed yet" : "No catalog plugins installed yet")
                                  : c == 3 ? "No addins in the catalog yet" : "No plugins in this category");
         else if (!strcmp(f, "count")) {
@@ -1295,15 +1341,15 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
             else snprintf(b, n, "%d %s%s %s  \xc2\xb7  %d queued", nv, c == 3 ? "addin" : "plugin", nv == 1 ? "" : "s",
                           m->tab == 1 ? "installed" : m->tab == 2 ? "to update" : "available", q);
         }
-        else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0);
-        else if (!strncmp(f, "info_", 5)) info_field(m, ct->info, f + 5, b, n);
+        else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0 && !m->kb);
+        else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, f + 5, b, n);
         else if (!strncmp(f, "card", 4) && f[4] >= '1' && f[4] <= '0' + ROWS) {   /* card<r>_1: the name, and its selection */
-            int k = ct->top + f[4] - '1', i = k < nv && ct->info < 0 ? ct->view[k] : -1;
+            int k = ct->top + f[4] - '1', i = k < nv && !hide ? ct->view[k] : -1;
             if (strstr(f, "_on")) snprintf(b, n, "%d", i >= 0 && i == m->sel);
             else snprintf(b, n, "%s", i >= 0 ? m->pkg[i].name : " ");
         } else if (f[0] == 'r' && f[1] >= '1' && f[1] <= '0' + ROWS && f[2] == '_') {
             int k = ct->top + f[1] - '1';
-            row_field(m, ct, k < nv && ct->info < 0 ? ct->view[k] : -1, f + 3, b, n);
+            row_field(m, ct, k < nv && !hide ? ct->view[k] : -1, f + 3, b, n);
         } else ok = 0;
     }
     else if (!strcmp(key, "display_rev")) snprintf(b, n, "%u", m->rev);
@@ -1323,7 +1369,17 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
     else if (!strcmp(key, "upd_all")) snprintf(b, n, "%d", upd > 0 && !busy);
     else if (!strcmp(key, "apply_state"))   /* 0 off, 1 apply, 2 preparing, 3 ready (restart), 4 retry */
         snprintf(b, n, "%d", busy ? 2 : m->ready ? 3 : m->failed && q ? 4 : q && !m->dev->problem[0] ? 1 : 0);
-    else if (!strcmp(key, "refresh") || !strcmp(key, "update_all") || !strcmp(key, "apply") || !strcmp(key, "noop")) snprintf(b, n, "0");
+    else if (!strcmp(key, "search_txt")) snprintf(b, n, "%s", m->query[0] ? m->query : "Search plugins");
+    else if (!strcmp(key, "search_on")) snprintf(b, n, "%d", m->query[0] != 0);
+    else if (!strcmp(key, "kb")) snprintf(b, n, "%d", m->kb);
+    else if (!strcmp(key, "kb_txt")) snprintf(b, n, "%s", m->kb ? (m->query[0] ? m->query : "Type to search") : " ");
+    else if (!strcmp(key, "kb_count"))
+    {
+        if (!m->kb || !m->query[0]) snprintf(b, n, " ");
+        else snprintf(b, n, "%d match%s", m->cat[0].nview, m->cat[0].nview == 1 ? "" : "es");
+    }
+    else if (!strcmp(key, "refresh") || !strcmp(key, "update_all") || !strcmp(key, "apply") || !strcmp(key, "noop") ||
+             !strcmp(key, "search") || !strcmp(key, "search_clear") || !strncmp(key, "kb_", 3)) snprintf(b, n, "0");
     else ok = 0;
     pthread_mutex_unlock(&m->mu);
     return ok;
