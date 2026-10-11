@@ -1230,6 +1230,19 @@ static void requeue(mgr_t *m, pkg_t *p, int q) {   /* any change to the queue dr
     for (int c = 0; c < NCAT; c++) m->cat[c].menu = -1;
 }
 
+/* what a tap can change on screen: set_param reports a new display_rev only when this moves. MPC sends values back
+ * after the engine reports them (tab, scroll, list rows); a report for each of those echoes kept the screen busy. */
+static unsigned ui_sig(const mgr_t *m) {
+    unsigned h = 2166136261u;
+#define MIX(x) (h = (h ^ (unsigned)(x)) * 16777619u)
+    MIX(m->tab); MIX(m->kb); MIX(m->sel); MIX(m->ready); MIX(m->failed); MIX(m->sticky); MIX(m->job);
+    for (const char *q = m->query; *q; q++) MIX(*q);
+    for (int c = 0; c < NCAT; c++) { MIX(m->cat[c].top); MIX(m->cat[c].menu); MIX(m->cat[c].info); }
+    for (int i = 0; i < m->npkg; i++) if (m->pkg[i].queued) { MIX(i); MIX(m->pkg[i].queued); }
+#undef MIX
+    return h;
+}
+
 static int cat_of(const char *key) {   /* "a_..": the MPC tab a param belongs to, or -1 (shared) */
     for (int c = 0; c < NCAT; c++) if (key[0] == CATKEY[c] && key[1] == '_') return c;
     return -1;
@@ -1240,14 +1253,18 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
     double v = atof(val);
     pthread_mutex_lock(&m->mu);
     int busy = m->busy == J_PREPARE || m->busy == J_LAUNCH, c = cat_of(key);
-    /* A row button that changes its picture (INSTALL -> QUEUED, the trash and its open state) is another control on
-     * the same parameter: the new one, under the finger still on the screen, fires again. So a row trigger counts
-     * once per 600 ms. */
-    if (c >= 0 && key[2] == 'r' && v >= 0.5) {
+    unsigned before = ui_sig(m), rev = m->rev;
+    /* A tap reaches a trigger twice (seen on an MPC X: every letter typed twice, INSTALL queued and unqueued), and a
+     * row button that changes its picture is another control on the same parameter, which fires again under the
+     * finger. So a press of the same trigger counts once per 350 ms (a doubled APPLY would skip its "Ready" step). */
+    int trig = (c >= 0 && (key[2] == 'r' || !strcmp(key + 2, "info_close"))) || !strncmp(key, "kb_", 3) ||
+               !strcmp(key, "search") || !strcmp(key, "search_clear") || !strcmp(key, "refresh") ||
+               !strcmp(key, "update_all") || !strcmp(key, "apply");
+    if (trig && v >= 0.5) {
         struct timespec now;
         clock_gettime(CLOCK_MONOTONIC, &now);
         long ms = (now.tv_sec - m->last_t.tv_sec) * 1000 + (now.tv_nsec - m->last_t.tv_nsec) / 1000000;
-        if (!strcmp(key, m->last_key) && ms < 600) { pthread_mutex_unlock(&m->mu); return; }
+        if (!strcmp(key, m->last_key) && ms < 350) { pthread_mutex_unlock(&m->mu); return; }
         snprintf(m->last_key, sizeof m->last_key, "%s", key);
         m->last_t = now;
     }
@@ -1317,12 +1334,16 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
         if (m->ready) { m->ready = 0; post(m, J_LAUNCH); }
         else if (count_queued(m) && !m->dev->problem[0]) post(m, J_PREPARE);
     }
-    m->rev++;
+    if (ui_sig(m) != before && m->rev == rev) m->rev++;
     pthread_mutex_unlock(&m->mu);
 }
 
 static int mgr_get_param(void *inst, const char *key, char *b, int n) {
     mgr_t *m = inst;
+    /* The wrapper asks every text param for "<key>_on" (list-row selection) every 10 ms until one isn't answered:
+     * only the rows answer, so the readouts are asked once and then left alone. */
+    size_t kl = strlen(key);
+    if (kl > 3 && !strcmp(key + kl - 3, "_on") && !strstr(key, "_card")) return 0;
     pthread_mutex_lock(&m->mu);
     int upd = count_updates(m), q = count_queued(m), busy = m->busy == J_PREPARE || m->busy == J_LAUNCH, ok = 1, c = cat_of(key);
     if (c >= 0) {
@@ -1342,6 +1363,7 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
                           m->tab == 1 ? "installed" : m->tab == 2 ? "to update" : "available", q);
         }
         else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0 && !m->kb);
+        else if (!strcmp(f, "sb")) snprintf(b, n, "%d", !hide && m->loaded);   /* the scroll bar: not over an overlay */
         else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, f + 5, b, n);
         else if (!strncmp(f, "card", 4) && f[4] >= '1' && f[4] <= '0' + ROWS) {   /* card<r>_1: the name, and its selection */
             int k = ct->top + f[4] - '1', i = k < nv && !hide ? ct->view[k] : -1;
@@ -1370,7 +1392,7 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
     else if (!strcmp(key, "apply_state"))   /* 0 off, 1 apply, 2 preparing, 3 ready (restart), 4 retry */
         snprintf(b, n, "%d", busy ? 2 : m->ready ? 3 : m->failed && q ? 4 : q && !m->dev->problem[0] ? 1 : 0);
     else if (!strcmp(key, "search_txt")) snprintf(b, n, "%s", m->query[0] ? m->query : "Search plugins");
-    else if (!strcmp(key, "search_on")) snprintf(b, n, "%d", m->query[0] != 0);
+    else if (!strcmp(key, "search_set")) snprintf(b, n, "%d", m->query[0] != 0);
     else if (!strcmp(key, "kb")) snprintf(b, n, "%d", m->kb);
     else if (!strcmp(key, "kb_txt")) snprintf(b, n, "%s", m->kb ? (m->query[0] ? m->query : "Type to search") : " ");
     else if (!strcmp(key, "kb_count"))

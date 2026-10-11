@@ -107,8 +107,8 @@ def main():
     button("btn_q_update.svg", 170, 50, "UPD. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
     button("btn_q_remove.svg", 170, 50, "DEL. QUEUED", "none", AMBER_TX, "clock", stroke="#b88426", dash=True, size=15)
     button("btn_disabled.svg", 170, 50, "INSTALL", "#222326", "#5c5f65", "lock", stroke="#2e3034", size=18)
-    button("btn_reinstall.svg", 124, 50, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=15)
-    button("btn_remove.svg", 124, 50, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=15)
+    button("btn_reinstall.svg", 96, 50, "REINSTALL", "#26272b", INK, None, stroke="#3a3c41", size=13)
+    button("btn_remove.svg", 96, 50, "REMOVE", "#2a1514", "#ff7a72", None, stroke="#6b2a26", size=13)
     svg("info.svg", 50, 50, '<circle cx="25" cy="25" r="17" fill="none" stroke="#3d8bff" stroke-width="2.8"/>'
         '<circle cx="25" cy="17.5" r="2.2" fill="#3d8bff"/><rect x="23.4" y="22" width="3.2" height="11.5" rx="1.6" fill="#3d8bff"/>')
     svg("trash.svg", 50, 50, icon("trash", 11, 11, 28, MUTED, 2.2))

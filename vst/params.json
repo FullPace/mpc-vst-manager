@@ -167,7 +167,7 @@
       "display": "string"
     },
     {
-      "key": "search_on",
+      "key": "search_set",
       "name": "Search set",
       "options": [
         "off",
@@ -472,6 +472,14 @@
     {
       "key": "a_ov",
       "name": "All info",
+      "options": [
+        "off",
+        "on"
+      ]
+    },
+    {
+      "key": "a_sb",
+      "name": "All scroll bar",
       "options": [
         "off",
         "on"
@@ -1644,6 +1652,14 @@
       ]
     },
     {
+      "key": "i_sb",
+      "name": "Instruments scroll bar",
+      "options": [
+        "off",
+        "on"
+      ]
+    },
+    {
       "key": "i_info_close",
       "name": "Instruments info close",
       "type": "trigger",
@@ -2810,6 +2826,14 @@
       ]
     },
     {
+      "key": "e_sb",
+      "name": "Effects scroll bar",
+      "options": [
+        "off",
+        "on"
+      ]
+    },
+    {
       "key": "e_info_close",
       "name": "Effects info close",
       "type": "trigger",
@@ -3970,6 +3994,14 @@
     {
       "key": "d_ov",
       "name": "Addins info",
+      "options": [
+        "off",
+        "on"
+      ]
+    },
+    {
+      "key": "d_sb",
+      "name": "Addins scroll bar",
       "options": [
         "off",
         "on"

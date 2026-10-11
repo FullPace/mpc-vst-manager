@@ -48,7 +48,7 @@ def params(nthumbs):
          trig("noop", "Badge"),
          trig("search", "Search"),
          ro("search_txt", "Search text"),
-         opt("search_on", "Search set", ["off", "on"]),
+         opt("search_set", "Search set", ["off", "on"]),
          trig("search_clear", "Search clear"),
          opt("kb", "Keyboard", ["off", "on"]),
          ro("kb_txt", "Keyboard text"),
@@ -63,6 +63,7 @@ def params(nthumbs):
               ro(c + "_empty_txt", t + " empty text"),
               ro(c + "_count", t + " count"),
               opt(c + "_ov", t + " info", ["off", "on"]),
+              opt(c + "_sb", t + " scroll bar", ["off", "on"]),
               trig(c + "_info_close", t + " info close"),
               opt(c + "_info_img", t + " info picture", thumbs),
               ro(c + "_info_name", t + " info name"),
@@ -112,7 +113,7 @@ def tab(c, title, nthumbs):
           "button cx=578 cy=178 label=\"\" key=noop img=images/upd_badge.svg w=24 h=24 when=upd_badge:on",
           "readout box=0 w=24 h=25 cx=578 cy=178 label=\"\" key=upd_count tsize=23 tweight=bold tcolor=1a1205 talign=center tpad=0 when=upd_badge:on",
           "button cx=1050 cy=178 label=\"\" key=search img=images/search_field.svg w=410 h=46 get=search_txt tsize=26 when=problem:no",
-          "button cx=1228 cy=178 label=\"\" key=search_clear img=images/search_x.svg w=40 h=40 when=search_on:on",
+          "button cx=1228 cy=178 label=\"\" key=search_clear img=images/search_x.svg w=40 h=40 when=search_set:on",
           "art file=images/banner.svg x=620 y=160 w=636 h=36 when=problem:yes",
           "readout box=0 w=590 h=30 cx=957 cy=178 label=\"\" key=problem_txt tsize=23 tcolor=ffb4ae tpad=0 when=problem:yes"]
     # empty states
@@ -138,13 +139,13 @@ def tab(c, title, nthumbs):
               "button cx=860 cy=%d label=\"\" key=%sinfo img=images/info.svg w=50 h=50 when=%svis:on" % (cy, k, k)]
         for st in STATES[1:-1]:
             L.append("button cx=990 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=170 h=50 when=%sstate:%s" % (cy, k, st, k, st))
-        L += ["button cx=956 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=124 h=50 when=%sstate:menu" % (cy, k, k),
-              "button cx=1086 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=124 h=50 when=%sstate:menu" % (cy, k, k),
+        L += ["button cx=943 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=96 h=50 when=%sstate:menu" % (cy, k, k),
+              "button cx=1045 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=96 h=50 when=%sstate:menu" % (cy, k, k),
               "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash.svg w=50 h=50 when=%strash:on" % (cy, k, k),
               "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=50 h=50 when=%strash:open" % (cy, k, k)]
     # the scroll bar: drag it, or turn the data wheel while it has focus
     L += ["", "slider_v cx=1241 cy=408 w=22 h=400 bw=36 ns=0 vs=12 label=\"\" key=%s_scroll img=images/scroll_thumb.svg "
-              "base=images/scroll_track.svg when=%s_ov:off" % (c, c)]
+              "base=images/scroll_track.svg when=%s_sb:on" % (c, c)]
     # the info overlay (over the list; the rows hide while it shows). It ends above the footer's text, whose when=
     # images reach up to y 631.
     L += ["", "art file=images/overlay.svg x=24 y=208 w=1232 h=420 when=%s_ov:on" % c,
@@ -161,8 +162,9 @@ def tab(c, title, nthumbs):
                  % (338 + col * 600, 472 + row * 36, c, l + 1))
     # the search keyboard (shared by the four tabs; the rows hide while it shows)
     L += ["", "art file=images/overlay_kb.svg x=24 y=208 w=1232 h=420 when=kb:on",
+          "button cx=1222 cy=244 label=\"\" key=kb_done img=images/close.svg w=50 h=50 when=kb:on",
           "readout box=0 w=760 h=46 cx=444 cy=250 label=\"\" key=kb_txt tsize=42 tweight=bold tcolor=ececed talign=left tpad=0",
-          "readout box=0 w=300 h=30 cx=1060 cy=250 label=\"\" key=kb_count tsize=27 tweight=regular tcolor=b4b7bc talign=right tpad=0"]
+          "readout box=0 w=300 h=30 cx=1010 cy=250 label=\"\" key=kb_count tsize=27 tweight=regular tcolor=b4b7bc talign=right tpad=0"]
     for ri, row in enumerate(KEY_ROWS):
         x0 = 640 - (len(row) * 70 - 6) // 2 + 32
         for ki, ch in enumerate(row):
