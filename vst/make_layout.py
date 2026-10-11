@@ -175,10 +175,10 @@ def tab(c, title, nthumbs):
     # the text beside it
     for d in range(4):
         L.append("readout box=0 w=610 h=30 cx=931 cy=%d label=\"\" key=%s_info_d%d tsize=26 tweight=regular tcolor=ececed talign=left tpad=0 when=%s_ov:on"
-                 % (322 + d * 29, c, d + 1, c))
+                 % (322 + d * 28, c, d + 1, c))
     for l in range(INFO_LINES):
         L.append("readout box=0 w=610 h=27 cx=931 cy=%d label=\"\" key=%s_info_l%d tsize=24 tweight=regular tcolor=c9ccd1 talign=left tpad=0 when=%s_ov:on"
-                 % (452 + l * 25, c, l + 1, c))
+                 % (442 + l * 24, c, l + 1, c))
     # the search keyboard (shared by the four tabs; the rows hide while it shows)
     L += ["", "art file=images/overlay_kb.svg x=24 y=208 w=1232 h=420 when=kb:on",
           "button cx=1222 cy=244 label=\"\" key=kb_done img=images/close.svg w=50 h=50 when=kb:on",
