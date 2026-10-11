@@ -142,15 +142,16 @@ def tab(c, title, nthumbs):
               "button cx=104 cy=%d label=\"\" key=%sinfo img=images/hit.svg w=140 h=69 when=%svis:on" % (cy, k, k),
               "readout box=0 w=480 h=26 cx=434 cy=%d label=\"\" key=%smeta tsize=24 tweight=regular tcolor=b4b7bc talign=left tpad=0 when=%svis:on" % (y + 60, k, k),
               "meter cx=384 cy=%d w=380 h=22 key=%sbadges strip=images/badges.svg frames=%d when=%svis:on" % (y + 86, k, NBADGES, k),
-              "readout box=0 w=170 h=30 cx=740 cy=%d label=\"\" key=%sver tsize=28 tcolor=ececed tpad=0 when=%svis:on" % (y + 38, k, k),
-              "readout box=0 w=170 h=26 cx=740 cy=%d label=\"\" key=%ssize tsize=24 tweight=regular tcolor=9da1a7 tpad=0 when=%svis:on" % (y + 68, k, k),
-              "button cx=860 cy=%d label=\"\" key=%sinfo img=images/info.svg w=50 h=50 when=%svis:on" % (cy, k, k)]
+              "readout box=0 w=170 h=30 cx=800 cy=%d label=\"\" key=%sver tsize=28 tcolor=ececed tpad=0 when=%svis:on" % (y + 38, k, k),
+              "readout box=0 w=170 h=26 cx=800 cy=%d label=\"\" key=%ssize tsize=24 tweight=regular tcolor=9da1a7 tpad=0 when=%svis:on" % (y + 68, k, k),
+              # right to left, 12 px apart and 12 px in from the row's edge (1214): trash, the action, info
+              "button cx=933 cy=%d label=\"\" key=%sinfo img=images/info.svg w=50 h=50 when=%svis:on" % (cy, k, k)]
         for st in STATES[1:-1]:
-            L.append("button cx=990 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=170 h=50 when=%sstate:%s" % (cy, k, st, k, st))
-        L += ["button cx=943 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=96 h=50 when=%sstate:menu" % (cy, k, k),
-              "button cx=1045 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=96 h=50 when=%sstate:menu" % (cy, k, k),
-              "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash.svg w=50 h=50 when=%strash:on" % (cy, k, k),
-              "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=50 h=50 when=%strash:open" % (cy, k, k)]
+            L.append("button cx=1055 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=170 h=50 when=%sstate:%s" % (cy, k, st, k, st))
+        L += ["button cx=1011 cy=%d label=\"\" key=%sreinstall img=images/btn_reinstall.svg w=82 h=50 when=%sstate:menu" % (cy, k, k),
+              "button cx=1099 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=82 h=50 when=%sstate:menu" % (cy, k, k),
+              "button cx=1177 cy=%d label=\"\" key=%sdel img=images/trash.svg w=50 h=50 when=%strash:on" % (cy, k, k),
+              "button cx=1177 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=50 h=50 when=%strash:open" % (cy, k, k)]
     # page up / page down (a dragged slider didn't follow the finger), and where the page is between them
     L += ["",
           "button cx=1240 cy=240 label=\"\" key=%s_up img=images/page_up.svg w=36 h=64 when=%s_upst:on" % (c, c),
@@ -198,10 +199,10 @@ def tab(c, title, nthumbs):
           "readout box=0 w=600 h=30 cx=330 cy=684 label=\"\" key=status tsize=26 tweight=regular tcolor=f0b44a talign=left tpad=0 when=foot:warn",
           "readout box=0 w=600 h=30 cx=330 cy=684 label=\"\" key=status tsize=26 tweight=regular tcolor=ff7a72 talign=left tpad=0 when=foot:error",
           "picture x=30 y=706 w=360 h=4 key=progress files=\"%s\"" % ",".join("images/progress_%02d.svg" % k for k in range(21)),
-          "button cx=930 cy=684 label=\"\" key=update_all img=images/updall_on.svg w=170 h=42 when=upd_all:on",
-          "button cx=930 cy=684 label=\"\" key=update_all img=images/updall_off.svg w=170 h=42 when=upd_all:off"]
+          "button cx=949 cy=684 label=\"\" key=update_all img=images/updall_on.svg w=170 h=42 when=upd_all:on",
+          "button cx=949 cy=684 label=\"\" key=update_all img=images/updall_off.svg w=170 h=42 when=upd_all:off"]
     for st in ("off", "apply", "preparing", "ready", "retry"):
-        L.append("button cx=1140 cy=684 label=\"\" key=apply img=images/apply_%s.svg w=210 h=42 when=apply_state:%s" % (st, st))
+        L.append("button cx=1151 cy=684 label=\"\" key=apply img=images/apply_%s.svg w=210 h=42 when=apply_state:%s" % (st, st))
     L += ["", "# Q-Link 1 scrolls the list", "qlinks \"%s\" = %s_scroll" % (title, c)]
     return L
 
