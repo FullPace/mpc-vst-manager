@@ -73,6 +73,7 @@ static const char *const THUMB_IDS[] = {
     "commander",
     "mpc-plaits",
     "remote",
+    "skipback",
     "usb-audio",
     "mr-drums",
     "mr-hyde",
@@ -109,5 +110,7 @@ static const char *const THUMB_IDS[] = {
     "vibe-fx",
     "warps",
     "wurl",
+    "mpc-link",
 };
-#define NTHUMBS 109
+#define NTHUMBS 111
+#define THUMB_BIG_PER 44   /* frames per images/thumbs_big_<n>.png (the info overlay's picture) */

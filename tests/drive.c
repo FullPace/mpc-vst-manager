@@ -34,7 +34,7 @@ static void cards(void) {
 }
 
 static void info(void) {
-  printf("  INFO ov=%s img=%s %s | %s\n", cget("ov"), cget("info_img"), cget("info_name"), cget("info_by"));
+  printf("  INFO ov=%s img=%s %s | %s\n", cget("ov"), cget("info_bf"), cget("info_name"), cget("info_by"));
   char k[16];
   for (int d = 1; d <= 4; d++) { snprintf(k, sizeof k, "info_d%d", d); printf("    %s\n", cget(k)); }
   for (int l = 1; l <= 8; l++) { snprintf(k, sizeof k, "info_l%d", l); printf("    %s\n", cget(k)); }
@@ -64,6 +64,7 @@ int main(int argc, char **argv) {
   set("tab", "2"); printf("UPDATES\n"); cards();
   set("tab", "1"); printf("INSTALLED\n"); cards();
   set("tab", "0"); cat = 'e'; printf("EFFECTS\n"); cards(); cat = 'i'; printf("INSTRUMENTS\n"); cards(); cat = 'a';
+  cat = 'p'; printf("COMPANION\n"); cards(); cpress("r1_act"); info(); cpress("info_close"); cpress("r1_info"); info(); cpress("info_close"); cat = 'a';
   printf("trash on row 1 (if installed), then queue row 2 and UPDATE ALL\n");
   set("tab", "1"); cpress("r1_del"); cards(); set("tab", "0"); cpress("r2_act"); press("update_all"); cards();
   press("apply"); wait_for("apply_state", "3"); cards();

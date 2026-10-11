@@ -13,7 +13,10 @@ from PIL import Image, ImageDraw, ImageFont
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CATALOG = "https://sd88me.github.io/mpc-vst-plugins/catalog.json"
+APPS = "https://sd88me.github.io/mpc-vst-plugins/apps.json"   # the companion apps: their own MPC tab
 W, H = 140, 69
+BW, BH = 560, 275   # the info overlay's picture (half its width)
+BIG_PER = 12288 // BH   # frames per big strip: a strip may be at most 12288 px tall (shadow_skin.MAX_STRIP)
 MAX = 127   # the meter's filmstrip holds at most 128 frames (frame 0 + 127 plugins)
 BG, EDGE, INK = (36, 38, 42), (52, 54, 59), (236, 236, 237)
 
@@ -45,22 +48,28 @@ def initials(name):
     return s if len(s) > 1 or not name[1:2] else (name[:2]).upper()
 
 
-def shot(url):
-    im = Image.open(io.BytesIO(fetch(url))).convert("RGB")
-    im.thumbnail((W, H), Image.LANCZOS)   # the whole screen, its shape kept, centred in the frame
-    pic = Image.new("RGB", (W, H), (12, 12, 13))
-    pic.paste(im, ((W - im.size[0]) // 2, (H - im.size[1]) // 2))
-    mask = Image.new("L", (W, H), 0)
-    ImageDraw.Draw(mask).rounded_rectangle((0, 0, W - 1, H - 1), 5, fill=255)
-    out = Image.new("RGB", (W, H), (12, 12, 13))
+def fit(src, w, h, bg, radius):
+    im = src.copy()
+    im.thumbnail((w, h), Image.LANCZOS)   # the whole screen, its shape kept, centred in the frame
+    pic = Image.new("RGB", (w, h), bg)
+    pic.paste(im, ((w - im.size[0]) // 2, (h - im.size[1]) // 2))
+    mask = Image.new("L", (w, h), 0)
+    ImageDraw.Draw(mask).rounded_rectangle((0, 0, w - 1, h - 1), radius, fill=255)
+    out = Image.new("RGB", (w, h), bg)
     out.paste(pic, (0, 0), mask)
     return out
 
 
+def shot(url):
+    return Image.open(io.BytesIO(fetch(url))).convert("RGB")
+
+
 def main():
     plugins = json.loads(fetch(CATALOG))["plugins"]
-    plugins = [p for p in plugins if any(v.get("url") for v in p.get("versions", []))][:MAX]
-    frames, ids = [tile("?")], [""]
+    plugins = [p for p in plugins if any(v.get("url") for v in p.get("versions", []))]
+    plugins += [dict(a, name=a["title"]) for a in json.loads(fetch(APPS))["apps"]]
+    plugins = plugins[:MAX]
+    frames, big, ids = [tile("?")], [tile("?").resize((BW, BH))], [""]
     for p in plugins:
         pic = None
         if p.get("screenshot"):
@@ -68,8 +77,19 @@ def main():
                 pic = shot(p["screenshot"])
             except Exception as e:   # a broken link: the initials instead
                 print("  %s: %s" % (p["id"], e), file=sys.stderr)
-        frames.append(pic or tile(initials(p["name"])))
+        if pic:
+            frames.append(fit(pic, W, H, (12, 12, 13), 5))
+            big.append(fit(pic, BW, BH, (20, 20, 22), 10))
+        else:
+            frames.append(tile(initials(p["name"])))
+            big.append(tile(initials(p["name"])).resize((BW, BH)))
         ids.append(p["id"])
+    nstrips = -(-len(big) // BIG_PER)   # every big strip has BIG_PER frames (the last padded), as its meter says
+    for s in range(nstrips):
+        strip = Image.new("RGB", (BW, BH * BIG_PER), (20, 20, 22))
+        for f, im in enumerate(big[s * BIG_PER:(s + 1) * BIG_PER]):
+            strip.paste(im, (0, f * BH))
+        strip.save(os.path.join(HERE, "images", "thumbs_big_%d.png" % s), optimize=True)
     strip = Image.new("RGB", (W, H * len(frames)))
     for i, f in enumerate(frames):
         strip.paste(f, (0, i * H))
@@ -79,6 +99,7 @@ def main():
         f.write("/* written by vst/make_thumbs.py: frame i of images/thumbs.png is THUMB_IDS[i] (0: no picture) */\n")
         f.write("static const char *const THUMB_IDS[] = {\n" + "".join('    "%s",\n' % i for i in ids) + "};\n")
         f.write("#define NTHUMBS %d\n" % len(ids))
+        f.write("#define THUMB_BIG_PER %d   /* frames per images/thumbs_big_<n>.png (the info overlay's picture) */\n" % BIG_PER)
     print("%d frames" % len(frames))
 
 

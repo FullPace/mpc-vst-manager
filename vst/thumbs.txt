@@ -70,6 +70,7 @@ morpho-pe
 commander
 mpc-plaits
 remote
+skipback
 usb-audio
 mr-drums
 mr-hyde
@@ -106,3 +107,4 @@ verglas
 vibe-fx
 warps
 wurl
+mpc-link

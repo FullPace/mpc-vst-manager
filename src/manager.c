@@ -47,12 +47,15 @@ typedef struct {
 
 #include "thumbs.h"   /* the list's plugin pictures (vst/make_thumbs.py) */
 
+#ifndef APPS_URL
+#define APPS_URL "https://sd88me.github.io/mpc-vst-plugins/apps.json"   /* the companion apps (the catalog site's Apps tab) */
+#endif
 #ifndef CATALOG_URL
 #define CATALOG_URL "https://sd88me.github.io/mpc-vst-plugins/catalog.json"   /* tests: a file:// fixture */
 #endif
 #define WORK "/tmp/pluginmgr"
 #define ROWS 4      /* list rows on screen; page up/down move them through the list */
-#define NCAT 4      /* MPC tabs: all, instruments, effects, addins (params a_, i_, e_, d_) */
+#define NCAT 5      /* MPC tabs: all, instruments, effects, addins, companion apps (params a_, i_, e_, d_, p_) */
 #ifndef ADDINS_DIR
 #define ADDINS_DIR "/data/mpc-addins"   /* one folder per addin id, as mpc-vst-plugins' addin installer lays them out */
 #endif
@@ -81,7 +84,8 @@ typedef struct device device_t;
 
 /* One MPC tab's list: the pkg indexes it shows (for the current view tab), how far it is scrolled, the row whose
  * trash menu (Reinstall, Remove) is open and the plugin whose info overlay is open (pkg indexes, -1 none). */
-typedef struct { int *view, nview, top, menu, info; } cat_t;
+typedef struct { int *view, nview, top, menu, info, notice; } cat_t;   /* notice: the overlay is a companion app's
+                                                                          "install it on your computer" note */
 typedef struct {
     pthread_t th;
     pthread_mutex_t mu;
@@ -149,6 +153,7 @@ static void logf_(const char *fmt, ...) {
 static int is_dir(const char *p) { struct stat st; return stat(p, &st) == 0 && S_ISDIR(st.st_mode); }
 static int is_file(const char *p) { struct stat st; return stat(p, &st) == 0 && S_ISREG(st.st_mode); }
 static int is_addin(const pkg_t *p) { return !strcmp(p->kind, "addin"); }
+static int is_app(const pkg_t *p) { return !strcmp(p->kind, "app"); }   /* a companion app (apps.json): installs on a computer */
 static int safe(const char *s) { return !strpbrk(s, "'\\\n`$"); }   /* fits in a single-quoted shell word */
 
 /* A child with MPC's LD_PRELOAD and the rest of its environment dropped; output goes to the log. */
@@ -479,18 +484,59 @@ static const char *pkg_member(const char *k, const char *v, void *ud) {
     return NULL;
 }
 
+/* a companion app (apps.json): title, version, release page; its platforms are the "tags" (macOS  ·  Windows) */
+static const char *app_member(const char *k, const char *v, void *ud) {
+    pkg_t *x = ud;
+    if (*v == '"') {
+        if (!strcmp(k, "id")) return jstr(v, x->id, sizeof x->id);
+        if (!strcmp(k, "title")) return jstr(v, x->name, sizeof x->name);
+        if (!strcmp(k, "author")) return jstr(v, x->author, sizeof x->author);
+        if (!strcmp(k, "license")) return jstr(v, x->license, sizeof x->license);
+        if (!strcmp(k, "repo")) return jstr(v, x->repo, sizeof x->repo);
+        if (!strcmp(k, "summary")) return jstr(v, x->summary, sizeof x->summary);
+        if (!strcmp(k, "release")) return jstr(v, x->homepage, sizeof x->homepage);
+        if (!strcmp(k, "version")) return jstr(v, x->latest, sizeof x->latest);
+    }
+    if ((!strcmp(k, "platforms") || !strcmp(k, "needs")) && *v == '[') {
+        const char *q = ws(v + 1);
+        for (int c = 0; q && *q == '"'; c++) {
+            char t[64];
+            q = jstr(q, t, sizeof t);
+            if (q && k[0] == 'p') {
+                const char *nice = !strcmp(t, "macos") ? "macOS" : !strcmp(t, "windows") ? "Windows" : !strcmp(t, "linux") ? "Linux" : t;
+                snprintf(x->tags + strlen(x->tags), sizeof x->tags - strlen(x->tags), "%s%s", c ? "  \xc2\xb7  " : "", nice);
+            } else if (q && !c) snprintf(x->style, sizeof x->style, "%s", t);   /* the first requirement */
+            q = q ? ws(q) : NULL;
+            if (q && *q == ',') q = ws(q + 1);
+        }
+        return q && *q == ']' ? q + 1 : NULL;
+    }
+    if (!strcmp(k, "tested") && *v == '{') {   /* {"device": .., "os": ..} */
+        str_t d = {{0}};
+        const char *q = jobject(v, device_member, &d);
+        snprintf(x->tested, sizeof x->tested, "%s", d.s);
+        return q;
+    }
+    return NULL;
+}
+
 typedef struct { pkg_t *pkg; int n, cap; } list_t;
 
-static const char *top_member(const char *k, const char *v, void *ud) {
+static const char *top_member(const char *k, const char *v, void *ud) {   /* catalog.json "plugins", apps.json "apps" */
     list_t *l = ud;
-    if (strcmp(k, "plugins") || *v != '[') return NULL;
+    int app = !strcmp(k, "apps");
+    if ((strcmp(k, "plugins") && !app) || *v != '[') return NULL;
     const char *p = ws(v + 1);
     if (*p == ']') return p + 1;
     for (;;) {
         pkg_t x;
         memset(&x, 0, sizeof x);
-        p = jobject(p, pkg_member, &x);
+        p = jobject(p, app ? app_member : pkg_member, &x);
         if (!p) return NULL;
+        if (app) {
+            snprintf(x.kind, sizeof x.kind, "app");
+            snprintf(x.alltags, sizeof x.alltags, "%s", x.tags);
+        }
         if (x.id[0]) {
             if (l->n == l->cap) {   /* no fixed limit: the catalog outgrew 64 entries (it stopped at "M") */
                 int cap = l->cap ? l->cap * 2 : 128;
@@ -829,6 +875,9 @@ static void do_refresh(mgr_t *m) {
         return;
     }
     free(s.buf);
+    sink_t a = {0};   /* the companion apps: a tab of their own; the plugins still load without them */
+    if (fetch(m, APPS_URL, &a) == 0 && !jobject(a.buf, top_member, &l)) logf_("apps.json could not be read");
+    free(a.buf);
     pkg_t *tmp = l.pkg;
     int *views[NCAT], ok = 1;
     for (int c = 0; c < NCAT; c++) ok &= (views[c] = calloc(l.n ? l.n : 1, sizeof (int))) != NULL;
@@ -1023,9 +1072,10 @@ static int has_update(const pkg_t *p) {   /* a known older version, or an old-la
 
 /* ---- the four lists: one per MPC tab ---- */
 
-static const char CATKEY[NCAT] = {'a', 'i', 'e', 'd'};   /* ALL, INSTRUMENTS, EFFECTS, ADDINS */
+static const char CATKEY[NCAT] = {'a', 'i', 'e', 'd', 'p'};   /* ALL, INSTRUMENTS, EFFECTS, ADDINS, COMPANION */
 
 static int in_cat(const pkg_t *p, int c) {
+    if (is_app(p)) return c == 4;
     return c == 0 || (c == 1 && !strcmp(p->kind, "instrument")) || (c == 2 && !strcmp(p->kind, "effect")) || (c == 3 && is_addin(p));
 }
 
@@ -1055,7 +1105,7 @@ static void rebuild_views(mgr_t *m) {
         int n = 0;
         for (int i = 0; ct->view && i < m->npkg; i++) {
             const pkg_t *p = &m->pkg[i];
-            if (!p->url[0] || !in_cat(p, c) || !matches(p, m->query)) continue;
+            if ((!p->url[0] && !is_app(p)) || !in_cat(p, c) || !matches(p, m->query)) continue;
             if (m->tab == 1 && !installed(p)) continue;
             if (m->tab == 2 && !has_update(p)) continue;
             ct->view[n++] = i;
@@ -1069,6 +1119,7 @@ enum { S_NONE, S_INSTALL, S_UPDATE, S_INSTALLED, S_Q_INSTALL, S_Q_UPDATE, S_Q_RE
 
 static int card_state(const mgr_t *m, const cat_t *ct, int i) {
     const pkg_t *p = &m->pkg[i];
+    if (is_app(p)) return S_INSTALL;   /* opens the "install it on your computer" note */
     if (ct->menu == i) return S_MENU;
     if (p->queued == Q_REMOVE) return S_Q_REMOVE;
     if (p->queued == Q_INSTALL) return installed(p) ? S_Q_UPDATE : S_Q_INSTALL;
@@ -1091,6 +1142,7 @@ static int count_queued(const mgr_t *m) {
 
 /* the frame of images/badges.svg (make_images.py): channel (1 stable, 2 beta) x high CPU x tested x old install */
 static int badge_index(const pkg_t *p) {
+    if (is_app(p)) return 0;   /* frame 0: no badges */
     int chan = !strcmp(p->channel, "beta") ? 2 : 1, cpu = !strcmp(p->cpu, "WARN") || !strcmp(p->cpu, "FAIL");
     return chan * 8 + cpu * 4 + (p->tested[0] != 0) * 2 + (p->legacy != 0);
 }
@@ -1149,23 +1201,49 @@ static void row_field(const mgr_t *m, const cat_t *ct, int i, const char *f, cha
         if (has_update(p) && !p->legacy) snprintf(b, n, "%s \xe2\x86\x92 %s", p->installed, p->latest);
         else snprintf(b, n, "v%s", p->latest);
     }
-    else if (!strcmp(f, "size")) size_txt(p->size, b, n);
+    else if (!strcmp(f, "size")) { if (is_app(p)) snprintf(b, n, "%s", p->tags); else size_txt(p->size, b, n); }
     else snprintf(b, n, "0");   /* the triggers */
 }
 
 /* the info overlay's field (key after "info_"), for the plugin at pkg index i (or -1: closed) */
-static void info_field(const mgr_t *m, int i, const char *f, char *b, int n) {
+static void info_field(const mgr_t *m, int i, int notice, const char *f, char *b, int n) {
     const pkg_t *p = i >= 0 ? &m->pkg[i] : NULL;
     b[0] = 0;
-    if (!strcmp(f, "img")) { snprintf(b, n, "%d", p ? p->thumb : 0); return; }
+    if (!strcmp(f, "bs")) { snprintf(b, n, "%d", p ? 1 + p->thumb / THUMB_BIG_PER : 0); return; }   /* 0: none */
+    if (!strcmp(f, "bf")) { snprintf(b, n, "%d", p ? p->thumb % THUMB_BIG_PER : 0); return; }
     if (!p) { snprintf(b, n, !strcmp(f, "close") ? "0" : " "); return; }
     char t[200], st[32];
+    const char *link = p->homepage[0] ? p->homepage : p->repo;
+    if (!strncmp(link, "https://", 8)) link += 8;
+    if (notice && strcmp(f, "name")) {   /* a companion app's INSTALL: where to get it */
+        if (!strcmp(f, "by")) snprintf(b, n, "by %s  \xc2\xb7  Companion app  \xc2\xb7  %s", p->author, p->tags);
+        else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') {
+            snprintf(t, sizeof t, "This app requires installation on your computer. Visit %s%s for installation instructions.",
+                     p->homepage[0] ? "" : "github.com/", link);
+            wrap_line(t, f[1] - '1', 4, 70, b, n);
+        } else snprintf(b, n, " ");
+        return;
+    }
+    if (is_app(p) && f[0] == 'l') {
+        switch (atoi(f + 1)) {
+        case 1: snprintf(b, n, "Version  %s", p->latest); break;
+        case 2: snprintf(b, n, "Platforms  %s", p->tags[0] ? p->tags : "\xe2\x80\x93"); break;
+        case 3: snprintf(b, n, "License  %s", p->license[0] ? p->license : "\xe2\x80\x93"); break;
+        case 4: snprintf(b, n, "Needs  %s", p->style[0] ? p->style : "\xe2\x80\x93"); break;
+        case 5: snprintf(b, n, "Source  %s%s", p->repo[0] ? "github.com/" : "\xe2\x80\x93", p->repo); break;
+        case 6: snprintf(b, n, "Download  %s", p->homepage[0] ? link : "\xe2\x80\x93"); break;
+        case 7: snprintf(b, n, "Tested  %s", p->tested[0] ? p->tested : "not yet"); break;
+        case 8: snprintf(b, n, "Installs on your computer, not on the MPC"); break;
+        default: snprintf(b, n, " ");
+        }
+        return;
+    }
     if (!strcmp(f, "name")) snprintf(b, n, "%s", p->name);
     else if (!strcmp(f, "by")) {
         spaced(p->style, st, sizeof st);
-        snprintf(b, n, "by %s  \xc2\xb7  %s%s%s", p->author, is_addin(p) ? "Addin" : !strcmp(p->kind, "effect") ? "Effect" : "Instrument",
+        snprintf(b, n, "by %s  \xc2\xb7  %s%s%s", p->author, is_app(p) ? "Companion app" : is_addin(p) ? "Addin" : !strcmp(p->kind, "effect") ? "Effect" : "Instrument",
                  st[0] ? "  \xc2\xb7  " : "", st);
-    } else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') wrap_line(p->summary[0] ? p->summary : "No description in the catalog.", f[1] - '1', 4, 90, b, n);
+    } else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') wrap_line(p->summary[0] ? p->summary : "No description in the catalog.", f[1] - '1', 4, 70, b, n);
     else if (f[0] == 'l') {
         switch (atoi(f + 1)) {
         case 1: snprintf(b, n, "Version  %s  \xc2\xb7  %s%s%s", p->latest, !strcmp(p->channel, "beta") ? "beta" : "stable",
@@ -1239,7 +1317,7 @@ static unsigned ui_sig(const mgr_t *m) {
 #define MIX(x) (h = (h ^ (unsigned)(x)) * 16777619u)
     MIX(m->tab); MIX(m->kb); MIX(m->sel); MIX(m->ready); MIX(m->failed); MIX(m->sticky); MIX(m->job);
     for (const char *q = m->query; *q; q++) MIX(*q);
-    for (int c = 0; c < NCAT; c++) { MIX(m->cat[c].top); MIX(m->cat[c].menu); MIX(m->cat[c].info); }
+    for (int c = 0; c < NCAT; c++) { MIX(m->cat[c].top); MIX(m->cat[c].menu); MIX(m->cat[c].info); MIX(m->cat[c].notice); }
     for (int i = 0; i < m->npkg; i++) if (m->pkg[i].queued) { MIX(i); MIX(m->pkg[i].queued); }
 #undef MIX
     return h;
@@ -1289,6 +1367,10 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
         if (!strncmp(f, "card", 4)) {   /* a tap anywhere on a row selects it (both toggle directions) */
             int k = ct->top + f[4] - '1';
             if (ct->info < 0 && k >= 0 && k < ct->nview) { m->sel = ct->view[k]; if (ct->menu != m->sel) ct->menu = -1; }
+        } else if (!strcmp(f, "scroll")) {   /* the data wheel / Q-Link 1: the list's first row */
+            int t = (int)(v + 0.5);
+            t = t < 0 ? 0 : t > max_top(ct) ? max_top(ct) : t;
+            if (t != ct->top) { ct->top = t; ct->menu = -1; }   /* an echo of the current row changes nothing */
         } else if (v < 0.5) {
             /* the other params are triggers: act on press only */
         } else if (!strcmp(f, "up") || !strcmp(f, "down")) {   /* a page of rows */
@@ -1301,7 +1383,8 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
             const char *g = f + 3;
             pkg_t *p = i >= 0 ? &m->pkg[i] : NULL;
             if (p) m->sel = i;
-            if (p && !strcmp(g, "info")) { ct->info = i; ct->menu = -1; }
+            if (p && !strcmp(g, "info")) { ct->info = i; ct->notice = 0; ct->menu = -1; }
+            else if (p && is_app(p) && !strcmp(g, "act")) { ct->info = i; ct->notice = 1; ct->menu = -1; }
             else if (p && !busy) {
                 int st = card_state(m, ct, i);
                 if (!strcmp(g, "act")) {
@@ -1358,22 +1441,26 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
         const cat_t *ct = &m->cat[c];
         const char *f = key + 2;
         int nv = ct->nview, hide = ct->info >= 0 || m->kb;   /* an overlay covers the rows */
-        if (!strcmp(f, "upst") || !strcmp(f, "downst"))   /* 0 hidden (an overlay), 1 dim (at the end), 2 on */
+        if (!strcmp(f, "scroll")) snprintf(b, n, "%d", ct->top);
+        else if (!strcmp(f, "scroll_display")) snprintf(b, n, " ");
+        else if (!strcmp(f, "sb")) snprintf(b, n, "%d", !hide && m->loaded && max_top(ct) > 0);
+        else if (!strcmp(f, "upst") || !strcmp(f, "downst"))   /* 0 hidden (an overlay), 1 dim (at the end), 2 on */
             snprintf(b, n, "%d", hide || !m->loaded ? 0 : (f[0] == 'u' ? ct->top > 0 : ct->top < max_top(ct)) ? 2 : 1);
         else if (!strcmp(f, "pos"))   /* the position bar between them: 0 hidden, 1..11 */
             snprintf(b, n, "%d", hide || !m->loaded || !max_top(ct) ? 0 : 1 + ct->top * 10 / max_top(ct));
         else if (!strcmp(f, "empty")) snprintf(b, n, "%d", hide ? 0 : !m->loaded ? (m->online || m->busy == J_REFRESH ? 0 : 1) : nv == 0 ? 2 : 0);
         else if (!strcmp(f, "empty_txt"))
             snprintf(b, n, "%s", !m->loaded || nv || hide ? " " : m->query[0] ? "No plugins match the search" : m->tab == 2 ? "Everything is up to date"
+                                 : c == 4 ? (m->tab == 0 ? "No companion apps in the catalog yet" : "Companion apps install on your computer")
                                  : m->tab == 1 ? (c == 3 ? "No addins installed yet" : "No catalog plugins installed yet")
                                  : c == 3 ? "No addins in the catalog yet" : "No plugins in this category");
         else if (!strcmp(f, "count")) {
             if (!m->loaded) snprintf(b, n, "%s", m->busy == J_REFRESH ? "Loading the plugin catalog\xe2\x80\xa6" : " ");
-            else snprintf(b, n, "%d %s%s %s  \xc2\xb7  %d queued", nv, c == 3 ? "addin" : "plugin", nv == 1 ? "" : "s",
+            else snprintf(b, n, "%d %s%s %s  \xc2\xb7  %d queued", nv, c == 4 ? "app" : c == 3 ? "addin" : "plugin", nv == 1 ? "" : "s",
                           m->tab == 1 ? "installed" : m->tab == 2 ? "to update" : "available", q);
         }
         else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0 && !m->kb);
-        else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, f + 5, b, n);
+        else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, ct->notice, f + 5, b, n);
         else if (!strncmp(f, "card", 4) && f[4] >= '1' && f[4] <= '0' + ROWS) {   /* card<r>_1: the name, and its selection */
             int k = ct->top + f[4] - '1', i = k < nv && !hide ? ct->view[k] : -1;
             if (strstr(f, "_on")) snprintf(b, n, "%d", i >= 0 && i == m->sel);

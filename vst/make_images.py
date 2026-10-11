@@ -90,7 +90,7 @@ def main():
         + '<rect x="956" y="15" width="1" height="30" fill="#2e3034"/>'
         + text(976, 26, "INTERNAL STORAGE", 16, MUTED, 600, spacing=1)
         + '<rect x="976" y="36" width="280" height="5" rx="2.5" fill="#2a2b2f"/>'
-        + '<rect x="24" y="64" width="580" height="56" rx="8" fill="%s" stroke="%s"/>' % (PANEL, LINE)
+        + '<rect x="24" y="70" width="580" height="44" rx="8" fill="%s" stroke="%s"/>' % (PANEL, LINE)
         + '<rect x="1230" y="122" width="22" height="400" rx="11" fill="none"/>'
         + '<rect y="566" width="1280" height="62" fill="%s"/><rect y="566" width="1280" height="1" fill="%s"/>' % (PANEL, LINE))
     svg("net_on.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="#3fbf7f"/>' + text(16, 18, "ONLINE", 17, MUTED, 600, spacing=1))
@@ -129,12 +129,15 @@ def main():
         for sfx, col in (("", INK), ("_dim", "#3a3c41")):
             svg("page_%s%s.svg" % (d, sfx), 36, 64, '<rect x="1" y="1" width="34" height="62" rx="8" fill="#1d1e21" stroke="#3a3c41" stroke-width="2"/>'
                 '<path d="%s" fill="none" stroke="%s" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' % (path, col))
+    svg("clear_thumb.svg", 36, 40, '<rect width="36" height="40" fill="#000000" fill-opacity="0.01"/>')
+    svg("clear_track.svg", 36, 250, '<rect width="36" height="250" fill="#000000" fill-opacity="0.01"/>')
     for k in range(12):
         svg("pos_%02d.svg" % k, 20, 294, ('<rect x="7" y="0" width="6" height="294" rx="3" fill="#202124"/>'
                                           '<rect x="4" y="%d" width="12" height="44" rx="6" fill="#6b6e74"/>' % (25 * (k - 1))) if k else "")
     # the info overlay, and the empty states
     svg("overlay.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
-        '<rect x="24" y="238" width="1184" height="1" fill="%s"/>' % LINE)
+        '<rect x="24" y="88" width="1184" height="1" fill="%s"/>'
+        '<rect x="600" y="230" width="612" height="1" fill="%s"/>' % (LINE, LINE))
     svg("offline.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>'
         + icon("nowifi", 596, 100, 40, DIM, 2) + text(616, 190, "Can’t reach the plugin catalog", 24, INK, 700, "middle")
         + text(616, 222, "Check the MPC’s network connection in Preferences, then refresh.", 17, DIM, 400, "middle"))
@@ -144,8 +147,8 @@ def main():
     svg("banner.svg", 636, 36, '<rect x="0.5" y="0.5" width="635" height="35" rx="8" fill="#2a1514" stroke="#6b2a26"/>'
         + icon("warn", 12, 10, 16, "#ff7a72", 2.5))
     # search field (its text is drawn live on top), clear button, the keyboard overlay and its keys
-    svg("search_field.svg", 410, 46, '<rect x="1" y="1" width="408" height="44" rx="22" fill="%s" stroke="#3a3c41" stroke-width="2"/>' % PANEL
-        + '<g transform="translate(16 11)" fill="none" stroke="%s" stroke-width="2.4" stroke-linecap="round">'
+    svg("search_field.svg", 410, 40, '<rect x="1" y="1" width="408" height="38" rx="19" fill="%s" stroke="#3a3c41" stroke-width="2"/>' % PANEL
+        + '<g transform="translate(16 8)" fill="none" stroke="%s" stroke-width="2.4" stroke-linecap="round">'
           '<circle cx="10" cy="10" r="7.5"/><path d="M15.5 15.5L22 22"/></g>' % DIM)
     svg("search_x.svg", 40, 40, '<circle cx="20" cy="20" r="14" fill="#3a3c41"/>'
         '<path d="M14 14l12 12M26 14L14 26" stroke="%s" stroke-width="2.6" stroke-linecap="round"/>' % INK)
@@ -159,8 +162,8 @@ def main():
         svg("key_%s.svg" % k, w, 56, '<rect x="1" y="1" width="%d" height="54" rx="8" fill="%s" stroke="#3a3c41" stroke-width="2"/>' % (w - 2, fill)
             + text(w / 2, 36, label, 20, tx, 700, "middle", spacing=1.2))
     # view tabs (the option names are drawn on top by the renderer)
-    svg("tab_off.svg", 190, 46, '<rect width="190" height="46" rx="6" fill="none"/>')
-    svg("tab_on.svg", 190, 46, '<rect x="0.5" y="0.5" width="189" height="45" rx="6" fill="#2a2b2f" stroke="#4a4c52"/>')
+    svg("tab_off.svg", 190, 36, '<rect width="190" height="36" rx="6" fill="none"/>')
+    svg("tab_on.svg", 190, 36, '<rect x="0.5" y="0.5" width="189" height="35" rx="6" fill="#2a2b2f" stroke="#4a4c52"/>')
     # footer
     button("updall_on.svg", 170, 42, "UPDATE ALL", "none", AMBER_TX, None, stroke=AMBER, size=16)
     button("updall_off.svg", 170, 42, "UPDATE ALL", "none", "#4a4c52", None, stroke="#3a3c41", size=16)
