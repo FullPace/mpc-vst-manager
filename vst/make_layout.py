@@ -121,7 +121,7 @@ def tab(c, title, nthumbs):
     L += ["art file=images/offline.svg x=24 y=208 w=1232 h=436 when=%s_empty:offline" % c,
           "button cx=640 cy=490 label=\"\" key=refresh img=images/btn_refresh.svg w=170 h=48 when=%s_empty:offline" % c,
           "art file=images/empty.svg x=24 y=208 w=1232 h=438 when=%s_empty:empty" % c,
-          "readout box=0 w=800 h=32 cx=640 cy=427 label=\"\" key=%s_empty_txt tsize=30 tweight=regular tcolor=9da1a7 talign=center tpad=0" % c]
+          "readout box=0 w=800 h=32 cx=640 cy=427 label=\"\" key=%s_empty_txt tsize=30 tweight=regular tcolor=9da1a7 talign=center tpad=0 when=%s_empty:empty" % (c, c)]
     # the rows
     for r in range(1, ROWS + 1):
         y = ROW_Y + (r - 1) * ROW_STEP
@@ -133,10 +133,10 @@ def tab(c, title, nthumbs):
               # the plugin picture; a tap on it opens the info overlay like the (i) button
               "meter cx=104 cy=%d w=140 h=69 key=%simg strip=images/thumbs.png frames=%d when=%svis:on" % (cy, k, nthumbs, k),
               "button cx=104 cy=%d label=\"\" key=%sinfo img=images/hit.svg w=140 h=69 when=%svis:on" % (cy, k, k),
-              "readout box=0 w=480 h=26 cx=434 cy=%d label=\"\" key=%smeta tsize=24 tweight=regular tcolor=b4b7bc talign=left tpad=0" % (y + 60, k),
+              "readout box=0 w=480 h=26 cx=434 cy=%d label=\"\" key=%smeta tsize=24 tweight=regular tcolor=b4b7bc talign=left tpad=0 when=%svis:on" % (y + 60, k, k),
               "meter cx=384 cy=%d w=380 h=22 key=%sbadges strip=images/badges.svg frames=%d when=%svis:on" % (y + 86, k, NBADGES, k),
-              "readout box=0 w=170 h=30 cx=740 cy=%d label=\"\" key=%sver tsize=28 tcolor=ececed tpad=0" % (y + 38, k),
-              "readout box=0 w=170 h=26 cx=740 cy=%d label=\"\" key=%ssize tsize=24 tweight=regular tcolor=9da1a7 tpad=0" % (y + 68, k),
+              "readout box=0 w=170 h=30 cx=740 cy=%d label=\"\" key=%sver tsize=28 tcolor=ececed tpad=0 when=%svis:on" % (y + 38, k, k),
+              "readout box=0 w=170 h=26 cx=740 cy=%d label=\"\" key=%ssize tsize=24 tweight=regular tcolor=9da1a7 tpad=0 when=%svis:on" % (y + 68, k, k),
               "button cx=860 cy=%d label=\"\" key=%sinfo img=images/info.svg w=50 h=50 when=%svis:on" % (cy, k, k)]
         for st in STATES[1:-1]:
             L.append("button cx=990 cy=%d label=\"\" key=%sact img=images/btn_%s.svg w=170 h=50 when=%sstate:%s" % (cy, k, st, k, st))
@@ -151,25 +151,26 @@ def tab(c, title, nthumbs):
           "button cx=1240 cy=614 label=\"\" key=%s_down img=images/page_down.svg w=36 h=64 when=%s_downst:on" % (c, c),
           "button cx=1240 cy=614 label=\"\" key=%s_down img=images/page_down_dim.svg w=36 h=64 when=%s_downst:dim" % (c, c),
           "picture x=1230 y=280 w=20 h=294 key=%s_pos files=\"%s\"" % (c, ",".join("images/pos_%02d.svg" % k for k in range(12)))]
-    # the info overlay (over the list; the rows hide while it shows). It ends above the footer's text, whose when=
+    # the info overlay (over the list; the rows hide while it shows). Its texts show only with it: a readout takes the
+    # touches over its box even when empty, and these lie over the rows' buttons (INSTALL got no taps). It ends above the footer's text, whose when=
     # images reach up to y 631.
     L += ["", "art file=images/overlay.svg x=24 y=208 w=1232 h=420 when=%s_ov:on" % c,
           "button cx=1222 cy=244 label=\"\" key=%s_info_close img=images/close.svg w=50 h=50 when=%s_ov:on" % (c, c),
           "meter cx=118 cy=258 w=140 h=69 key=%s_info_img strip=images/thumbs.png frames=%d when=%s_ov:on" % (c, nthumbs, c),
-          "readout box=0 w=900 h=42 cx=660 cy=244 label=\"\" key=%s_info_name tsize=40 tweight=bold tcolor=ececed talign=left tpad=0" % c,
-          "readout box=0 w=900 h=30 cx=660 cy=280 label=\"\" key=%s_info_by tsize=27 tweight=regular tcolor=b4b7bc talign=left tpad=0" % c]
+          "readout box=0 w=900 h=42 cx=660 cy=244 label=\"\" key=%s_info_name tsize=40 tweight=bold tcolor=ececed talign=left tpad=0 when=%s_ov:on" % (c, c),
+          "readout box=0 w=900 h=30 cx=660 cy=280 label=\"\" key=%s_info_by tsize=27 tweight=regular tcolor=b4b7bc talign=left tpad=0 when=%s_ov:on" % (c, c)]
     for d in range(4):
-        L.append("readout box=0 w=1180 h=32 cx=638 cy=%d label=\"\" key=%s_info_d%d tsize=29 tweight=regular tcolor=ececed talign=left tpad=0"
-                 % (322 + d * 31, c, d + 1))
+        L.append("readout box=0 w=1180 h=32 cx=638 cy=%d label=\"\" key=%s_info_d%d tsize=29 tweight=regular tcolor=ececed talign=left tpad=0 when=%s_ov:on"
+                 % (322 + d * 31, c, d + 1, c))
     for l in range(INFO_LINES):
         col, row = divmod(l, INFO_LINES // 2)
-        L.append("readout box=0 w=580 h=30 cx=%d cy=%d label=\"\" key=%s_info_l%d tsize=27 tweight=regular tcolor=c9ccd1 talign=left tpad=0"
-                 % (338 + col * 600, 472 + row * 36, c, l + 1))
+        L.append("readout box=0 w=580 h=30 cx=%d cy=%d label=\"\" key=%s_info_l%d tsize=27 tweight=regular tcolor=c9ccd1 talign=left tpad=0 when=%s_ov:on"
+                 % (338 + col * 600, 472 + row * 36, c, l + 1, c))
     # the search keyboard (shared by the four tabs; the rows hide while it shows)
     L += ["", "art file=images/overlay_kb.svg x=24 y=208 w=1232 h=420 when=kb:on",
           "button cx=1222 cy=244 label=\"\" key=kb_done img=images/close.svg w=50 h=50 when=kb:on",
-          "readout box=0 w=760 h=46 cx=444 cy=250 label=\"\" key=kb_txt tsize=42 tweight=bold tcolor=ececed talign=left tpad=0",
-          "readout box=0 w=300 h=30 cx=1010 cy=250 label=\"\" key=kb_count tsize=27 tweight=regular tcolor=b4b7bc talign=right tpad=0"]
+          "readout box=0 w=760 h=46 cx=444 cy=250 label=\"\" key=kb_txt tsize=42 tweight=bold tcolor=ececed talign=left tpad=0 when=kb:on",
+          "readout box=0 w=300 h=30 cx=1010 cy=250 label=\"\" key=kb_count tsize=27 tweight=regular tcolor=b4b7bc talign=right tpad=0 when=kb:on"]
     for ri, row in enumerate(KEY_ROWS):
         x0 = 640 - (len(row) * 70 - 6) // 2 + 32
         for ki, ch in enumerate(row):
