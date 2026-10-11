@@ -4,7 +4,9 @@ A VST2 "instrument" for the MPC OS plugin host that is really an app: it lists t
 [mpc-vst-plugins catalog](https://sd88me.github.io/mpc-vst-plugins/) on the MPC screen and installs, updates and
 removes plugins, with one MPC restart per batch. Working on an MPC One and an MPC Key 37 (Gen1, MPC OS 3.9.1).
 
-![Plugin Manager on an MPC One](docs/screenshot.png)
+![Plugin Manager on an MPC X: the list](docs/gui-overview.png)
+
+![Plugin Manager on an MPC X: a plugin's details](docs/gui-info.png)
 
 ## Using it
 1. Add **Plugin Manager** to a plugin track. It loads the catalog and reads what is installed.
