@@ -96,7 +96,7 @@ def main():
     svg("net_on.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="#3fbf7f"/>' + text(16, 18, "ONLINE", 17, MUTED, 600, spacing=1))
     svg("net_off.svg", 100, 24, '<circle cx="5" cy="12" r="4.5" fill="%s"/>' % RED + text(16, 18, "OFFLINE", 17, "#ff9a93", 600, spacing=1))
     # a list row (the list tile's own picture; the plugin picture sits on its left)
-    for name, fill, edge in (("row_off.svg", PANEL, "#222326"), ("row_on.svg", "#1d1e21", RED)):
+    for name, fill, edge in (("row_off.svg", PANEL, "#222326"), ("row_on.svg", PANEL, "#222326")):   # no selection mark
         svg(name, 1190, 102, '<rect x="1" y="1" width="1188" height="100" rx="8" fill="%s" stroke="%s" stroke-width="2"/>' % (fill, edge))
     svg("hit.svg", 140, 69, '<rect width="140" height="69" fill="#000000" fill-opacity="0.01"/>')   # the picture's tap area
     # row buttons
@@ -124,9 +124,14 @@ def main():
             + ([BADGES[3]] if tested else []) + ([BADGES[4]] if old else [])
         frames += badge_row(labels, i * 22, 22)
     svg("badges.svg", 380, 22 * 24, frames)
-    # the scroll bar
-    svg("scroll_track.svg", 22, 400, '<rect x="8" y="0" width="6" height="400" rx="3" fill="#202124"/>')
-    svg("scroll_thumb.svg", 22, 60, '<rect x="3" y="0" width="16" height="60" rx="8" fill="#4a4c52"/>')
+    # page up / down, and the position bar between them (0: hidden; 1..11: the page's place)
+    for d, path in (("up", "M10 38l8-10 8 10"), ("down", "M10 26l8 10 8-10")):
+        for sfx, col in (("", INK), ("_dim", "#3a3c41")):
+            svg("page_%s%s.svg" % (d, sfx), 36, 64, '<rect x="1" y="1" width="34" height="62" rx="8" fill="#1d1e21" stroke="#3a3c41" stroke-width="2"/>'
+                '<path d="%s" fill="none" stroke="%s" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>' % (path, col))
+    for k in range(12):
+        svg("pos_%02d.svg" % k, 20, 294, ('<rect x="7" y="0" width="6" height="294" rx="3" fill="#202124"/>'
+                                          '<rect x="4" y="%d" width="12" height="44" rx="6" fill="#6b6e74"/>' % (25 * (k - 1))) if k else "")
     # the info overlay, and the empty states
     svg("overlay.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
         '<rect x="24" y="238" width="1184" height="1" fill="%s"/>' % LINE)

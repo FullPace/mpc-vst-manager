@@ -51,7 +51,7 @@ typedef struct {
 #define CATALOG_URL "https://sd88me.github.io/mpc-vst-plugins/catalog.json"   /* tests: a file:// fixture */
 #endif
 #define WORK "/tmp/pluginmgr"
-#define ROWS 4      /* list rows on screen; the scroll bar moves them through the list */
+#define ROWS 4      /* list rows on screen; page up/down move them through the list */
 #define NCAT 4      /* MPC tabs: all, instruments, effects, addins (params a_, i_, e_, d_) */
 #ifndef ADDINS_DIR
 #define ADDINS_DIR "/data/mpc-addins"   /* one folder per addin id, as mpc-vst-plugins' addin installer lays them out */
@@ -95,6 +95,7 @@ typedef struct {
     int kb;                       /* the search keyboard is open */
     char last_key[24];            /* debounce: the last row trigger taken, and when (see mgr_set_param) */
     struct timespec last_t;
+    int debug;                    /* WORK/debug existed at start: log every set_param */
     int online, loaded, failed;   /* catalog reachable; ever loaded; the last APPLY failed (offer RETRY) */
     int sticky, status_kind;      /* status set by the worker or an action (else the queue summary); 0 ok, 1 warn, 2 error */
     int downloading;
@@ -1195,6 +1196,7 @@ static void *mgr_create(const char *data_dir) {
     pthread_cond_init(&m->cv, NULL);
     m->sel = -1;
     for (int c = 0; c < NCAT; c++) m->cat[c].menu = m->cat[c].info = -1;
+    m->debug = access(WORK "/debug", F_OK) == 0;
     m->online = 1;
     snprintf(m->status, sizeof m->status, "Starting\xe2\x80\xa6");
     m->sticky = 1;
@@ -1251,13 +1253,19 @@ static int cat_of(const char *key) {   /* "a_..": the MPC tab a param belongs to
 static void mgr_set_param(void *inst, const char *key, const char *val) {
     mgr_t *m = inst;
     double v = atof(val);
+    if (m->debug) {   /* touch WORK/debug and restart MPC: every set, timed, in WORK/set.log */
+        struct timespec ts;
+        clock_gettime(CLOCK_MONOTONIC, &ts);
+        FILE *f = fopen(WORK "/set.log", "a");
+        if (f) { fprintf(f, "%ld.%03ld %s=%s\n", (long)ts.tv_sec, ts.tv_nsec / 1000000, key, val); fclose(f); }
+    }
     pthread_mutex_lock(&m->mu);
     int busy = m->busy == J_PREPARE || m->busy == J_LAUNCH, c = cat_of(key);
     unsigned before = ui_sig(m), rev = m->rev;
     /* A tap reaches a trigger twice (seen on an MPC X: every letter typed twice, INSTALL queued and unqueued), and a
      * row button that changes its picture is another control on the same parameter, which fires again under the
      * finger. So a press of the same trigger counts once per 350 ms (a doubled APPLY would skip its "Ready" step). */
-    int trig = (c >= 0 && (key[2] == 'r' || !strcmp(key + 2, "info_close"))) || !strncmp(key, "kb_", 3) ||
+    int trig = (c >= 0 && (key[2] == 'r' || !strcmp(key + 2, "info_close") || !strcmp(key + 2, "up") || !strcmp(key + 2, "down"))) || !strncmp(key, "kb_", 3) ||
                !strcmp(key, "search") || !strcmp(key, "search_clear") || !strcmp(key, "refresh") ||
                !strcmp(key, "update_all") || !strcmp(key, "apply");
     if (trig && v >= 0.5) {
@@ -1278,15 +1286,15 @@ static void mgr_set_param(void *inst, const char *key, const char *val) {
     } else if (c >= 0) {
         cat_t *ct = &m->cat[c];
         const char *f = key + 2;
-        if (!strcmp(f, "scroll")) {   /* the bar's top is the list's start */
-            int t = (int)((100.0 - v) * max_top(ct) / 100.0 + 0.5);
-            t = t < 0 ? 0 : t > max_top(ct) ? max_top(ct) : t;
-            if (t != ct->top) { ct->top = t; ct->menu = -1; }   /* an echo of the current position changes nothing */
-        } else if (!strncmp(f, "card", 4)) {   /* a tap anywhere on a row selects it (both toggle directions) */
+        if (!strncmp(f, "card", 4)) {   /* a tap anywhere on a row selects it (both toggle directions) */
             int k = ct->top + f[4] - '1';
             if (ct->info < 0 && k >= 0 && k < ct->nview) { m->sel = ct->view[k]; if (ct->menu != m->sel) ct->menu = -1; }
         } else if (v < 0.5) {
             /* the other params are triggers: act on press only */
+        } else if (!strcmp(f, "up") || !strcmp(f, "down")) {   /* a page of rows */
+            int t = ct->top + (f[0] == 'u' ? -ROWS : ROWS);
+            ct->top = t < 0 ? 0 : t > max_top(ct) ? max_top(ct) : t;
+            ct->menu = -1;
         } else if (!strcmp(f, "info_close")) ct->info = -1;
         else if (f[0] == 'r' && f[1] >= '1' && f[1] <= '0' + ROWS && f[2] == '_' && ct->info < 0) {
             int k = ct->top + f[1] - '1', i = k < ct->nview ? ct->view[k] : -1;
@@ -1350,8 +1358,10 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
         const cat_t *ct = &m->cat[c];
         const char *f = key + 2;
         int nv = ct->nview, hide = ct->info >= 0 || m->kb;   /* an overlay covers the rows */
-        if (!strcmp(f, "scroll")) snprintf(b, n, "%d", max_top(ct) ? 100 - ct->top * 100 / max_top(ct) : 100);
-        else if (!strcmp(f, "scroll_display")) snprintf(b, n, " ");
+        if (!strcmp(f, "upst") || !strcmp(f, "downst"))   /* 0 hidden (an overlay), 1 dim (at the end), 2 on */
+            snprintf(b, n, "%d", hide || !m->loaded ? 0 : (f[0] == 'u' ? ct->top > 0 : ct->top < max_top(ct)) ? 2 : 1);
+        else if (!strcmp(f, "pos"))   /* the position bar between them: 0 hidden, 1..11 */
+            snprintf(b, n, "%d", hide || !m->loaded || !max_top(ct) ? 0 : 1 + ct->top * 10 / max_top(ct));
         else if (!strcmp(f, "empty")) snprintf(b, n, "%d", hide ? 0 : !m->loaded ? (m->online || m->busy == J_REFRESH ? 0 : 1) : nv == 0 ? 2 : 0);
         else if (!strcmp(f, "empty_txt"))
             snprintf(b, n, "%s", !m->loaded || nv || hide ? " " : m->query[0] ? "No plugins match the search" : m->tab == 2 ? "Everything is up to date"
@@ -1363,7 +1373,6 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
                           m->tab == 1 ? "installed" : m->tab == 2 ? "to update" : "available", q);
         }
         else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0 && !m->kb);
-        else if (!strcmp(f, "sb")) snprintf(b, n, "%d", !hide && m->loaded);   /* the scroll bar: not over an overlay */
         else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, f + 5, b, n);
         else if (!strncmp(f, "card", 4) && f[4] >= '1' && f[4] <= '0' + ROWS) {   /* card<r>_1: the name, and its selection */
             int k = ct->top + f[4] - '1', i = k < nv && !hide ? ct->view[k] : -1;

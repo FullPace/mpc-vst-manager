@@ -22,7 +22,7 @@ static void cset(const char *f, const char *v) { char k[64]; snprintf(k, sizeof 
 static void cpress(const char *f) { cset(f, "1"); cset(f, "0"); }
 
 static void cards(void) {
-  printf("  [%c scroll %s] %s | foot %s: %s | apply_state %s\n", cat, cget("scroll"), cget("count"), get("foot"), get("status"), get("apply_state"));
+  printf("  [%c scroll %s] %s | foot %s: %s | apply_state %s\n", cat, cget("pos"), cget("count"), get("foot"), get("status"), get("apply_state"));
   for (int r = 1; r <= 4; r++) {
     char k[32];
     #define F(f) (snprintf(k, sizeof k, "r%d_" f, r), cget(k))
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
     press("apply"); sleep(1); cards();
     e->destroy(m); return 0;
   }
-  printf("ALL\n"); cards(); cset("scroll", "50"); cards(); cset("scroll", "0"); cards(); cset("scroll", "100");
+  printf("ALL\n"); cards(); cpress("down"); cards(); cpress("up"); cards();
   printf("info on row 2\n"); cpress("r2_info"); info(); cards(); cpress("info_close"); printf("  closed: ov=%s\n", cget("ov"));
   set("tab", "2"); printf("UPDATES\n"); cards();
   set("tab", "1"); printf("INSTALLED\n"); cards();

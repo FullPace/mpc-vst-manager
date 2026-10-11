@@ -441,12 +441,52 @@
       "momentary": true
     },
     {
-      "key": "a_scroll",
-      "name": "All scroll",
-      "min": 0,
-      "max": 100,
-      "default": 100,
-      "dynamic_display": true
+      "key": "a_up",
+      "name": "All page up",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "a_down",
+      "name": "All page down",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "a_upst",
+      "name": "All up shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "a_downst",
+      "name": "All down shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "a_pos",
+      "name": "All position",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11"
+      ]
     },
     {
       "key": "a_empty",
@@ -472,14 +512,6 @@
     {
       "key": "a_ov",
       "name": "All info",
-      "options": [
-        "off",
-        "on"
-      ]
-    },
-    {
-      "key": "a_sb",
-      "name": "All scroll bar",
       "options": [
         "off",
         "on"
@@ -1615,12 +1647,52 @@
       "momentary": true
     },
     {
-      "key": "i_scroll",
-      "name": "Instruments scroll",
-      "min": 0,
-      "max": 100,
-      "default": 100,
-      "dynamic_display": true
+      "key": "i_up",
+      "name": "Instruments page up",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "i_down",
+      "name": "Instruments page down",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "i_upst",
+      "name": "Instruments up shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "i_downst",
+      "name": "Instruments down shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "i_pos",
+      "name": "Instruments position",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11"
+      ]
     },
     {
       "key": "i_empty",
@@ -1646,14 +1718,6 @@
     {
       "key": "i_ov",
       "name": "Instruments info",
-      "options": [
-        "off",
-        "on"
-      ]
-    },
-    {
-      "key": "i_sb",
-      "name": "Instruments scroll bar",
       "options": [
         "off",
         "on"
@@ -2789,12 +2853,52 @@
       "momentary": true
     },
     {
-      "key": "e_scroll",
-      "name": "Effects scroll",
-      "min": 0,
-      "max": 100,
-      "default": 100,
-      "dynamic_display": true
+      "key": "e_up",
+      "name": "Effects page up",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "e_down",
+      "name": "Effects page down",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "e_upst",
+      "name": "Effects up shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "e_downst",
+      "name": "Effects down shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "e_pos",
+      "name": "Effects position",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11"
+      ]
     },
     {
       "key": "e_empty",
@@ -2820,14 +2924,6 @@
     {
       "key": "e_ov",
       "name": "Effects info",
-      "options": [
-        "off",
-        "on"
-      ]
-    },
-    {
-      "key": "e_sb",
-      "name": "Effects scroll bar",
       "options": [
         "off",
         "on"
@@ -3963,12 +4059,52 @@
       "momentary": true
     },
     {
-      "key": "d_scroll",
-      "name": "Addins scroll",
-      "min": 0,
-      "max": 100,
-      "default": 100,
-      "dynamic_display": true
+      "key": "d_up",
+      "name": "Addins page up",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "d_down",
+      "name": "Addins page down",
+      "type": "trigger",
+      "momentary": true
+    },
+    {
+      "key": "d_upst",
+      "name": "Addins up shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "d_downst",
+      "name": "Addins down shown",
+      "options": [
+        "hidden",
+        "dim",
+        "on"
+      ]
+    },
+    {
+      "key": "d_pos",
+      "name": "Addins position",
+      "options": [
+        "0",
+        "1",
+        "2",
+        "3",
+        "4",
+        "5",
+        "6",
+        "7",
+        "8",
+        "9",
+        "10",
+        "11"
+      ]
     },
     {
       "key": "d_empty",
@@ -3994,14 +4130,6 @@
     {
       "key": "d_ov",
       "name": "Addins info",
-      "options": [
-        "off",
-        "on"
-      ]
-    },
-    {
-      "key": "d_sb",
-      "name": "Addins scroll bar",
       "options": [
         "off",
         "on"

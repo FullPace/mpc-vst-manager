@@ -58,12 +58,13 @@ def params(nthumbs):
     thumbs = ["%d" % k for k in range(nthumbs)]
     for c, title in CATS:
         t = title.title()
-        p += [{"key": c + "_scroll", "name": t + " scroll", "min": 0, "max": 100, "default": 100, "dynamic_display": True},
+        p += [trig(c + "_up", t + " page up"), trig(c + "_down", t + " page down"),
+              opt(c + "_upst", t + " up shown", ["hidden", "dim", "on"]), opt(c + "_downst", t + " down shown", ["hidden", "dim", "on"]),
+              opt(c + "_pos", t + " position", ["%d" % k for k in range(12)]),
               opt(c + "_empty", t + " empty", ["no", "offline", "empty"]),
               ro(c + "_empty_txt", t + " empty text"),
               ro(c + "_count", t + " count"),
               opt(c + "_ov", t + " info", ["off", "on"]),
-              opt(c + "_sb", t + " scroll bar", ["off", "on"]),
               trig(c + "_info_close", t + " info close"),
               opt(c + "_info_img", t + " info picture", thumbs),
               ro(c + "_info_name", t + " info name"),
@@ -143,9 +144,13 @@ def tab(c, title, nthumbs):
               "button cx=1045 cy=%d label=\"\" key=%sremove img=images/btn_remove.svg w=96 h=50 when=%sstate:menu" % (cy, k, k),
               "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash.svg w=50 h=50 when=%strash:on" % (cy, k, k),
               "button cx=1170 cy=%d label=\"\" key=%sdel img=images/trash_open.svg w=50 h=50 when=%strash:open" % (cy, k, k)]
-    # the scroll bar: drag it, or turn the data wheel while it has focus
-    L += ["", "slider_v cx=1241 cy=408 w=22 h=400 bw=36 ns=0 vs=12 label=\"\" key=%s_scroll img=images/scroll_thumb.svg "
-              "base=images/scroll_track.svg when=%s_sb:on" % (c, c)]
+    # page up / page down (a dragged slider didn't follow the finger), and where the page is between them
+    L += ["",
+          "button cx=1240 cy=240 label=\"\" key=%s_up img=images/page_up.svg w=36 h=64 when=%s_upst:on" % (c, c),
+          "button cx=1240 cy=240 label=\"\" key=%s_up img=images/page_up_dim.svg w=36 h=64 when=%s_upst:dim" % (c, c),
+          "button cx=1240 cy=614 label=\"\" key=%s_down img=images/page_down.svg w=36 h=64 when=%s_downst:on" % (c, c),
+          "button cx=1240 cy=614 label=\"\" key=%s_down img=images/page_down_dim.svg w=36 h=64 when=%s_downst:dim" % (c, c),
+          "picture x=1230 y=280 w=20 h=294 key=%s_pos files=\"%s\"" % (c, ",".join("images/pos_%02d.svg" % k for k in range(12)))]
     # the info overlay (over the list; the rows hide while it shows). It ends above the footer's text, whose when=
     # images reach up to y 631.
     L += ["", "art file=images/overlay.svg x=24 y=208 w=1232 h=420 when=%s_ov:on" % c,
