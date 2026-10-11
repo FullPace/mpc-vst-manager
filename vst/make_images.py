@@ -138,6 +138,8 @@ def main():
     svg("overlay.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
         '<rect x="24" y="88" width="1184" height="1" fill="%s"/>'
         '<rect x="600" y="218" width="612" height="1" fill="%s"/>' % (LINE, LINE))
+    svg("overlay_note.svg", 1232, 420, '<rect x="1" y="1" width="1230" height="418" rx="10" fill="#141416" stroke="#3a3c41" stroke-width="2"/>'
+        '<rect x="24" y="76" width="1184" height="1" fill="%s"/>' % LINE)
     svg("offline.svg", 1232, 438, '<rect x="1" y="1" width="1230" height="436" rx="10" fill="none" stroke="#2e3034" stroke-dasharray="6 6"/>'
         + icon("nowifi", 596, 100, 40, DIM, 2) + text(616, 190, "Can’t reach the plugin catalog", 24, INK, 700, "middle")
         + text(616, 222, "Check the MPC’s network connection in Preferences, then refresh.", 17, DIM, 400, "middle"))

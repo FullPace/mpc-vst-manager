@@ -532,8 +532,27 @@
       "name": "All info",
       "options": [
         "off",
-        "on"
+        "on",
+        "note"
       ]
+    },
+    {
+      "key": "a_note_name",
+      "name": "All note name",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "a_note_txt",
+      "name": "All note text",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "a_note_hp",
+      "name": "All note homepage",
+      "type": "readout",
+      "display": "string"
     },
     {
       "key": "a_info_close",
@@ -1709,8 +1728,27 @@
       "name": "Instruments info",
       "options": [
         "off",
-        "on"
+        "on",
+        "note"
       ]
+    },
+    {
+      "key": "i_note_name",
+      "name": "Instruments note name",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "i_note_txt",
+      "name": "Instruments note text",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "i_note_hp",
+      "name": "Instruments note homepage",
+      "type": "readout",
+      "display": "string"
     },
     {
       "key": "i_info_close",
@@ -2886,8 +2924,27 @@
       "name": "Effects info",
       "options": [
         "off",
-        "on"
+        "on",
+        "note"
       ]
+    },
+    {
+      "key": "e_note_name",
+      "name": "Effects note name",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "e_note_txt",
+      "name": "Effects note text",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "e_note_hp",
+      "name": "Effects note homepage",
+      "type": "readout",
+      "display": "string"
     },
     {
       "key": "e_info_close",
@@ -4063,8 +4120,27 @@
       "name": "Addins info",
       "options": [
         "off",
-        "on"
+        "on",
+        "note"
       ]
+    },
+    {
+      "key": "d_note_name",
+      "name": "Addins note name",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "d_note_txt",
+      "name": "Addins note text",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "d_note_hp",
+      "name": "Addins note homepage",
+      "type": "readout",
+      "display": "string"
     },
     {
       "key": "d_info_close",
@@ -5240,8 +5316,27 @@
       "name": "Companion info",
       "options": [
         "off",
-        "on"
+        "on",
+        "note"
       ]
+    },
+    {
+      "key": "p_note_name",
+      "name": "Companion note name",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "p_note_txt",
+      "name": "Companion note text",
+      "type": "readout",
+      "display": "string"
+    },
+    {
+      "key": "p_note_hp",
+      "name": "Companion note homepage",
+      "type": "readout",
+      "display": "string"
     },
     {
       "key": "p_info_close",

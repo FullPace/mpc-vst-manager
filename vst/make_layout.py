@@ -70,7 +70,8 @@ def params(nthumbs):
               opt(c + "_empty", t + " empty", ["no", "offline", "empty"]),
               ro(c + "_empty_txt", t + " empty text"),
               ro(c + "_count", t + " count"),
-              opt(c + "_ov", t + " info", ["off", "on"]),
+              opt(c + "_ov", t + " info", ["off", "on", "note"]),
+              ro(c + "_note_name", t + " note name"), ro(c + "_note_txt", t + " note text"), ro(c + "_note_hp", t + " note homepage"),
               trig(c + "_info_close", t + " info close"),
               opt(c + "_info_bs", t + " info picture strip", ["none"] + ["s%d" % k for k in range(-(-nthumbs // BIG_PER))]),
               opt(c + "_info_bf", t + " info picture frame", ["%d" % k for k in range(BIG_PER)]),
@@ -169,6 +170,12 @@ def tab(c, title, nthumbs):
           "button cx=1222 cy=244 label=\"\" key=%s_info_close img=images/close.svg w=50 h=50 when=%s_ov:on" % (c, c),
           "readout box=0 w=1100 h=42 cx=600 cy=240 label=\"\" key=%s_info_name tsize=40 tweight=bold tcolor=ececed talign=left tpad=0 when=%s_ov:on" % (c, c),
           "readout box=0 w=1100 h=30 cx=600 cy=275 label=\"\" key=%s_info_by tsize=27 tweight=regular tcolor=b4b7bc talign=left tpad=0 when=%s_ov:on" % (c, c)]
+    # a companion app's INSTALL: a text note in a plain panel
+    L += ["art file=images/overlay_note.svg x=24 y=208 w=1232 h=420 when=%s_ov:note" % c,
+          "button cx=1222 cy=244 label=\"\" key=%s_info_close img=images/close.svg w=50 h=50 when=%s_ov:note" % (c, c),
+          "readout box=0 w=1100 h=42 cx=600 cy=240 label=\"\" key=%s_note_name tsize=40 tweight=bold tcolor=ececed talign=left tpad=0 when=%s_ov:note" % (c, c),
+          "readout box=0 w=1180 h=32 cx=638 cy=330 label=\"\" key=%s_note_txt tsize=29 tweight=regular tcolor=ececed talign=left tpad=0 when=%s_ov:note" % (c, c),
+          "readout box=0 w=1180 h=32 cx=638 cy=390 label=\"\" key=%s_note_hp tsize=29 tweight=regular tcolor=ececed talign=left tpad=0 when=%s_ov:note" % (c, c)]
     # the picture, half the overlay wide: three strips (a strip holds BIG_PER frames), the engine shows the right one
     for s in range(-(-nthumbs // BIG_PER)):
         L.append("meter cx=330 cy=446 w=560 h=275 key=%s_info_bf strip=images/thumbs_big_%d.png frames=%d when=%s_info_bs:s%d"

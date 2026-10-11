@@ -67,6 +67,7 @@ typedef struct {
     char id[48], name[48], author[32], kind[16], dist[16], latest[24], url[512], sha[72];
     char style[32], tags[96], channel[16], cpu[8], tested[48];   /* the row's badges and meta line */
     char summary[320], repo[96], license[40], homepage[128], date[16], alltags[160];   /* the info overlay */
+    char release[160];    /* a companion app's release page (apps.json "release") */
     int thumb;            /* frame of images/thumbs.png (thumbs.h), 0: none */
     long long size;
     char installed[24];   /* "" not installed, "?" installed (version unknown), else the version */
@@ -494,7 +495,8 @@ static const char *app_member(const char *k, const char *v, void *ud) {
         if (!strcmp(k, "license")) return jstr(v, x->license, sizeof x->license);
         if (!strcmp(k, "repo")) return jstr(v, x->repo, sizeof x->repo);
         if (!strcmp(k, "summary")) return jstr(v, x->summary, sizeof x->summary);
-        if (!strcmp(k, "release")) return jstr(v, x->homepage, sizeof x->homepage);
+        if (!strcmp(k, "release")) return jstr(v, x->release, sizeof x->release);
+        if (!strcmp(k, "homepage")) return jstr(v, x->homepage, sizeof x->homepage);
         if (!strcmp(k, "version")) return jstr(v, x->latest, sizeof x->latest);
     }
     if ((!strcmp(k, "platforms") || !strcmp(k, "needs")) && *v == '[') {
@@ -1209,21 +1211,21 @@ static void row_field(const mgr_t *m, const cat_t *ct, int i, const char *f, cha
 static void info_field(const mgr_t *m, int i, int notice, const char *f, char *b, int n) {
     const pkg_t *p = i >= 0 ? &m->pkg[i] : NULL;
     b[0] = 0;
-    if (!strcmp(f, "bs")) { snprintf(b, n, "%d", p ? 1 + p->thumb / THUMB_BIG_PER : 0); return; }   /* 0: none */
+    if (!strcmp(f, "bs")) { snprintf(b, n, "%d", p && !notice ? 1 + p->thumb / THUMB_BIG_PER : 0); return; }   /* 0: none */
     if (!strcmp(f, "bf")) { snprintf(b, n, "%d", p ? p->thumb % THUMB_BIG_PER : 0); return; }
     if (!p) { snprintf(b, n, !strcmp(f, "close") ? "0" : " "); return; }
     char t[200], st[32];
-    const char *link = p->homepage[0] ? p->homepage : p->repo;
-    if (!strncmp(link, "https://", 8)) link += 8;
-    if (notice && strcmp(f, "name")) {   /* a companion app's INSTALL: where to get it */
-        if (!strcmp(f, "by")) snprintf(b, n, "by %s  \xc2\xb7  Companion app  \xc2\xb7  %s", p->author, p->tags);
-        else if (f[0] == 'd' && f[1] >= '1' && f[1] <= '4') {
-            snprintf(t, sizeof t, "This app requires installation on your computer. Visit %s%s for installation instructions.",
-                     p->homepage[0] ? "" : "github.com/", link);
-            wrap_line(t, f[1] - '1', 4, 70, b, n);
-        } else snprintf(b, n, " ");
+    const char *rel = !strncmp(p->release, "https://", 8) ? p->release + 8 : p->release;
+    const char *home = !strncmp(p->homepage, "https://", 8) ? p->homepage + 8 : p->homepage;
+    char site[200];   /* the homepage, else the repo's page */
+    snprintf(site, sizeof site, "%s%s", home[0] ? "" : p->repo[0] ? "github.com/" : "\xe2\x80\x93", home[0] ? home : p->repo);
+    if (notice && strcmp(f, "name")) {   /* a companion app's INSTALL: a note, text only */
+        if (!strcmp(f, "by")) snprintf(b, n, "This app requires installation on your computer. Visit the website for more information.");
+        else if (!strcmp(f, "hp")) snprintf(b, n, "Homepage: %s", site);
+        else snprintf(b, n, " ");
         return;
     }
+
     if (is_app(p) && f[0] == 'l') {
         switch (atoi(f + 1)) {
         case 1: snprintf(b, n, "Version  %s", p->latest); break;
@@ -1231,9 +1233,9 @@ static void info_field(const mgr_t *m, int i, int notice, const char *f, char *b
         case 3: snprintf(b, n, "License  %s", p->license[0] ? p->license : "\xe2\x80\x93"); break;
         case 4: snprintf(b, n, "Needs  %s", p->style[0] ? p->style : "\xe2\x80\x93"); break;
         case 5: snprintf(b, n, "Source  %s%s", p->repo[0] ? "github.com/" : "\xe2\x80\x93", p->repo); break;
-        case 6: snprintf(b, n, "Download  %s", p->homepage[0] ? link : "\xe2\x80\x93"); break;
+        case 6: snprintf(b, n, "Homepage  %s", site); break;
         case 7: snprintf(b, n, "Tested  %s", p->tested[0] ? p->tested : "not yet"); break;
-        case 8: snprintf(b, n, "Installs on your computer, not on the MPC"); break;
+        case 8: snprintf(b, n, "Download  %s", rel[0] ? rel : "\xe2\x80\x93"); break;
         default: snprintf(b, n, " ");
         }
         return;
@@ -1459,7 +1461,14 @@ static int mgr_get_param(void *inst, const char *key, char *b, int n) {
             else snprintf(b, n, "%d %s%s %s  \xc2\xb7  %d queued", nv, c == 4 ? "app" : c == 3 ? "addin" : "plugin", nv == 1 ? "" : "s",
                           m->tab == 1 ? "installed" : m->tab == 2 ? "to update" : "available", q);
         }
-        else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info >= 0 && !m->kb);
+        else if (!strcmp(f, "ov")) snprintf(b, n, "%d", ct->info < 0 || m->kb ? 0 : ct->notice ? 2 : 1);   /* off, info, note */
+        else if (!strncmp(f, "note_", 5)) {   /* a companion app's install note */
+            const char *g = f + 5;
+            if (ct->info < 0 || m->kb || !ct->notice) snprintf(b, n, " ");
+            else if (!strcmp(g, "name")) info_field(m, ct->info, 0, "name", b, n);
+            else if (!strcmp(g, "txt")) info_field(m, ct->info, 1, "by", b, n);
+            else info_field(m, ct->info, 1, "hp", b, n);
+        }
         else if (!strncmp(f, "info_", 5)) info_field(m, m->kb ? -1 : ct->info, ct->notice, f + 5, b, n);
         else if (!strncmp(f, "card", 4) && f[4] >= '1' && f[4] <= '0' + ROWS) {   /* card<r>_1: the name, and its selection */
             int k = ct->top + f[4] - '1', i = k < nv && !hide ? ct->view[k] : -1;
